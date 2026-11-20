@@ -80,7 +80,7 @@ O site é um Worker da Cloudflare com ficheiros estáticos. A configuração est
 
 ### 5. Apontar o domínio para o Worker
 
-1. Descomente o bloco `routes` no fim do `wrangler.jsonc`, faça commit e push. Em alternativa, use **Worker → Settings → Domains & Routes → Add → Custom domain**.
+1. O domínio já está no bloco `routes` do `wrangler.jsonc`: o deploy liga-o sozinho. Se falhar por já existir um registo DNS `A`/`CNAME` em `pipeherostudio.digital` a apontar para outro lado, apague esse registo e volte a fazer deploy.
 2. Para `www`, crie em **Rules → Redirect Rules** um redirecionamento 301 de `www.pipeherostudio.digital/*` para `https://pipeherostudio.digital/${1}`. O `www` precisa de um registo DNS com proxy ativo, por exemplo `A www 192.0.2.1` com a nuvem laranja.
 
 ### Notas
