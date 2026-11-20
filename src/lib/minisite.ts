@@ -27,3 +27,17 @@ export function initials(name: string): string {
   const pick = (words.length ? words : [name.trim()]).slice(-2);
   return (pick.length > 1 ? pick[0][0] + pick[1][0] : (pick[0] || '?').slice(0, 2)).toUpperCase();
 }
+
+const TLD: Record<string, string> = { pt: '.pt', en: '.com', es: '.es' };
+
+/** Domínio fictício a partir do nome: "Tasca do Largo" → "tascadolargo.pt". */
+export function domainFor(name: string, lang: string): string {
+  const slug = name
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/&/g, 'e')
+    .replace(/[^a-z0-9]+/g, '')
+    .slice(0, 24);
+  return (slug || 'oseunegocio') + (TLD[lang] || '.com');
+}

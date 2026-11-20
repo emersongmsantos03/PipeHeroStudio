@@ -1,5 +1,5 @@
 /* Gancho do hero: o mini-site monta-se enquanto a pessoa escreve. Tudo no navegador. */
-import { PALETTE, initials, isBizType, type BizType } from '../lib/minisite';
+import { PALETTE, domainFor, initials, isBizType, type BizType } from '../lib/minisite';
 
 type TypeText = { label: string; tagline: string; cta: string; sections: string[][] };
 type Data = {
@@ -21,6 +21,7 @@ if (root) {
   const live = root.querySelector<HTMLElement>('[data-builder-live]')!;
   const dots = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-example]'));
   const q = (sel: string) => ms.querySelector<HTMLElement>(sel)!;
+  const setAll = (sel: string, text: string) => ms.querySelectorAll<HTMLElement>(sel).forEach((el) => (el.textContent = text));
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   let current: BizType = ms.dataset.type as BizType;
@@ -30,12 +31,13 @@ if (root) {
     const p = PALETTE[type];
     ms.dataset.type = type;
     ms.style.cssText = `--ms-bg:${p.bg};--ms-fg:${p.fg};--ms-muted:${p.muted};--ms-accent:${p.accent};--ms-on:${p.on}`;
-    q('[data-ms-logo]').textContent = initials(name);
-    q('[data-ms-brand]').textContent = name;
+    setAll('[data-ms-logo]', initials(name));
+    setAll('[data-ms-brand]', name);
+    setAll('[data-ms-domain]', domainFor(name, ms.dataset.lang || 'en'));
     const n = q('[data-ms-name]');
     n.textContent = name;
-    n.classList.toggle('is-long', name.length > 16 && name.length <= 26);
-    n.classList.toggle('is-xlong', name.length > 26);
+    n.classList.toggle('is-long', name.length > 15 && name.length <= 24);
+    n.classList.toggle('is-xlong', name.length > 24);
     q('[data-ms-kicker]').textContent = tp.label;
     q('[data-ms-tag]').textContent = tp.tagline;
     q('[data-ms-cta]').textContent = tp.cta;

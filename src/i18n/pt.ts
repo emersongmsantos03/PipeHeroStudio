@@ -74,6 +74,8 @@ const pt = {
   minisite: {
     preview: 'Pré-visualização do site',
     map: 'Mapa',
+    call: 'Ligar',
+    services: 'Serviços',
     types: {
       restaurant: {
         label: 'Restaurante',
@@ -301,6 +303,10 @@ const pt = {
       draftLabel: 'Mensagem pronta para a Marta',
       draft: 'Olá Marta! Já passaram 6 semanas desde a sua limpeza de pele. Quer que lhe reserve um horário? Temos vaga na quinta às 15h00 ou na sexta às 11h30.',
       q2: 'Prepara também para as outras três.',
+      sub: 'Clínica Exemplo · IA',
+      edit: 'Editar',
+      send: 'Enviar',
+      inputPh: 'Pergunte ao assistente…',
     },
     does: {
       name: 'O que faz',
@@ -446,6 +452,7 @@ const pt = {
       you: 'Cliente',
       ai: 'Assistente de IA',
       typing: 'O assistente está a escrever',
+      inputPh: 'Escreva uma mensagem…',
       messages: [
         ['user', 'Olá! Têm vaga para corte amanhã ao fim da tarde?'],
         ['ai', 'Olá! Sou o assistente de IA do Salão Lumi. Amanhã tenho vaga às 17h30 e às 18h15. Qual prefere?'],

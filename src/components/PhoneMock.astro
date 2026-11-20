@@ -5,7 +5,7 @@ const { size = 'md', class: cls } = Astro.props;
 ---
 <div class:list={['phone', `phone-${size}`, cls]}>
   <div class="phone-screen">
-    <span class="phone-notch" aria-hidden="true"></span>
+    <span class="phone-island" aria-hidden="true"></span>
     <slot />
   </div>
 </div>
@@ -14,32 +14,44 @@ const { size = 'md', class: cls } = Astro.props;
   .phone {
     --phone-w: 290px;
     width: min(100%, var(--phone-w));
-    aspect-ratio: 9 / 18.6;
-    padding: 10px;
-    border-radius: 46px;
-    background: #10182b;
-    box-shadow:
-      0 0 0 1px rgb(255 255 255 / 0.06) inset,
-      0 0 0 1px var(--line),
-      0 40px 80px -40px rgb(16 24 43 / 0.45);
+    aspect-ratio: 9 / 19;
+    padding: 9px;
+    border-radius: 50px;
     position: relative;
     flex: none;
+    background: linear-gradient(145deg, #4a5674 0%, #1a2133 22%, #0c111c 55%, #262f47 100%);
+    box-shadow:
+      inset 0 0 0 1.5px rgb(255 255 255 / 0.16),
+      inset 0 0 0 5px #0a0e17,
+      0 0 0 1px rgb(16 24 43 / 0.35),
+      0 30px 60px -28px rgb(16 24 43 / 0.55),
+      0 70px 110px -60px rgb(16 24 43 / 0.5);
   }
+  /* botões laterais */
+  .phone::before, .phone::after {
+    content: ''; position: absolute; width: 3px; border-radius: 2px; background: linear-gradient(#3b4562, #1a2133);
+  }
+  .phone::before { left: -2.5px; top: 21%; height: 40px; box-shadow: 0 52px 0 #232c43; }
+  .phone::after { right: -2.5px; top: 27%; height: 66px; }
   .phone-lg { --phone-w: 340px; }
   .phone-screen {
-    position: relative;
-    height: 100%;
-    border-radius: 36px;
-    overflow: hidden;
-    background: #fff;
-    isolation: isolate;
+    position: relative; height: 100%;
+    border-radius: 41px; overflow: hidden; isolation: isolate;
+    background: #000;
   }
-  .phone-notch {
-    position: absolute; z-index: 5; top: 9px; left: 50%; width: 84px; height: 22px; margin-left: -42px;
-    border-radius: 12px; background: #10182b;
+  .phone-island {
+    position: absolute; z-index: 5; top: 10px; left: 50%; width: 31%; height: 25px; transform: translateX(-50%);
+    border-radius: 14px; background: #04060b;
   }
   @media (prefers-color-scheme: dark) {
-    .phone { background: #05080f; box-shadow: 0 0 0 1px #2a3753, 0 40px 80px -40px rgb(0 0 0 / 0.7); }
-    .phone-notch { background: #05080f; }
+    .phone {
+      background: linear-gradient(145deg, #6a7798 0%, #2a3350 22%, #121a2c 55%, #3a4566 100%);
+      box-shadow:
+        inset 0 0 0 1.5px rgb(255 255 255 / 0.22),
+        inset 0 0 0 5px #06090f,
+        0 0 0 1px rgb(255 255 255 / 0.08),
+        0 30px 70px -30px rgb(0 0 0 / 0.8),
+        0 0 80px -20px rgb(255 200 61 / 0.12);
+    }
   }
 </style>

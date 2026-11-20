@@ -1,5 +1,5 @@
 ---
-/* Raiz: deteta a língua e redireciona. Se o JavaScript falhar, os links ficam visíveis. */
+/* Raiz: abre em inglês (ou na língua que o visitante escolheu antes). Sem JavaScript, os links ficam visíveis. */
 import '../styles/global.css';
 import Logo from '../components/Logo.astro';
 import { LANGS, LOCALE, absolute, href } from '../i18n/routes';
@@ -20,16 +20,9 @@ import { t } from '../i18n';
     <meta name="theme-color" content="#0b1120" media="(prefers-color-scheme: dark)" />
     <script is:inline>
       (function () {
-        var ok = ['pt', 'en', 'es'], pick = null;
-        try { var s = localStorage.getItem('phs-lang'); if (ok.indexOf(s) > -1) pick = s; } catch (e) {}
-        if (!pick) {
-          var list = navigator.languages || [navigator.language || ''];
-          for (var i = 0; i < list.length && !pick; i++) {
-            var c = String(list[i]).slice(0, 2).toLowerCase();
-            if (ok.indexOf(c) > -1) pick = c;
-          }
-        }
-        location.replace('/' + (pick || 'en') + '/');
+        var pick = 'en';
+        try { var s = localStorage.getItem('phs-lang'); if (s === 'pt' || s === 'es' || s === 'en') pick = s; } catch (e) {}
+        location.replace('/' + pick + '/');
       })();
     </script>
   </head>

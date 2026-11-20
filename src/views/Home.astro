@@ -127,7 +127,7 @@ const sides = ['left', 'right', 'left', 'right'] as const;
               )}
               {s.code === '02' && (
                 <div class="viz viz-chat panel">
-                  <div class="viz-head"><span class="tag"><b>IA</b>Chat</span><span class="tag-example">{d.ui.example}</span></div>
+                  <div class="viz-head"><span class="tag"><b>{lang === 'en' ? 'AI' : 'IA'}</b>Chat</span><span class="tag-example">{d.ui.example}</span></div>
                   <div class="vc-log">
                     {V.chat.map(([who, txt]) => <p class={`vc-msg is-${who}`}>{txt}</p>)}
                   </div>
@@ -150,7 +150,7 @@ const sides = ['left', 'right', 'left', 'right'] as const;
               )}
               {s.code === '04' && (
                 <div class="viz viz-log panel">
-                  <div class="viz-head"><span class="tag"><b>IA</b>Agente</span><span class="tag-example">{d.ui.example}</span></div>
+                  <div class="viz-head"><span class="tag"><b>{lang === 'en' ? 'AI' : 'IA'}</b>{h.stations[3].name}</span><span class="tag-example">{d.ui.example}</span></div>
                   <ol class="vl-list">
                     {V.log.map(([time, txt]) => <li><span class="mono">{time}</span><span>{txt}</span></li>)}
                   </ol>

@@ -72,6 +72,8 @@ const en: Dict = {
   minisite: {
     preview: 'Website preview',
     map: 'Map',
+    call: 'Call',
+    services: 'Services',
     types: {
       restaurant: {
         label: 'Restaurant',
@@ -299,6 +301,10 @@ const en: Dict = {
       draftLabel: 'Message ready for Emma',
       draft: "Hi Emma! It's been 6 weeks since your facial. Would you like me to book you in? We have Thursday at 3pm or Friday at 11:30am.",
       q2: 'Draft them for the other three too.',
+      sub: 'Example Clinic · AI',
+      edit: 'Edit',
+      send: 'Send',
+      inputPh: 'Ask the assistant…',
     },
     does: {
       name: 'What it does',
@@ -444,6 +450,7 @@ const en: Dict = {
       you: 'Customer',
       ai: 'AI assistant',
       typing: 'The assistant is typing',
+      inputPh: 'Type a message…',
       messages: [
         ['user', 'Hi! Do you have a haircut slot tomorrow late afternoon?'],
         ['ai', "Hi! I'm Lumi Salon's AI assistant. Tomorrow I have 5:30pm and 6:15pm. Which works for you?"],

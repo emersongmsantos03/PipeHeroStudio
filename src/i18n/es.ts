@@ -72,6 +72,8 @@ const es: Dict = {
   minisite: {
     preview: 'Vista previa de la web',
     map: 'Mapa',
+    call: 'Llamar',
+    services: 'Servicios',
     types: {
       restaurant: {
         label: 'Restaurante',
@@ -299,6 +301,10 @@ const es: Dict = {
       draftLabel: 'Mensaje listo para Lucía',
       draft: '¡Hola, Lucía! Han pasado 6 semanas desde tu limpieza facial. ¿Quieres que te reserve una cita? Tenemos hueco el jueves a las 15:00 o el viernes a las 11:30.',
       q2: 'Prepáralo también para las otras tres.',
+      sub: 'Clínica Ejemplo · IA',
+      edit: 'Editar',
+      send: 'Enviar',
+      inputPh: 'Pregunta al asistente…',
     },
     does: {
       name: 'Qué hace',
@@ -444,6 +450,7 @@ const es: Dict = {
       you: 'Cliente',
       ai: 'Asistente de IA',
       typing: 'El asistente está escribiendo',
+      inputPh: 'Escribe un mensaje…',
       messages: [
         ['user', '¡Hola! ¿Tenéis hueco para un corte mañana por la tarde?'],
         ['ai', '¡Hola! Soy el asistente de IA de Peluquería Lumi. Mañana tengo hueco a las 17:30 y a las 18:15. ¿Cuál prefieres?'],

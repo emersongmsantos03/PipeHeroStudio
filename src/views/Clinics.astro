@@ -6,6 +6,8 @@ import PhoneMock from '../components/PhoneMock.astro';
 import ContactForm from '../components/ContactForm.astro';
 import CopyEmail from '../components/CopyEmail.astro';
 import Arrow from '../components/Arrow.astro';
+import ChatWindow from '../components/ChatWindow.astro';
+import { initials } from '../lib/minisite';
 import { t } from '../i18n';
 import type { Lang } from '../i18n/routes';
 
@@ -27,24 +29,29 @@ const schema = [{ '@type': 'Service', name: c.hero.eyebrow, description: c.descr
       <p class="note-dot">{c.hero.note}</p>
     </div>
 
-    <figure class="cchat panel">
-      <figcaption class="cchat-head"><span class="tag"><b>IA</b>{c.chat.assistant}</span><span class="tag-example">{d.ui.example}</span></figcaption>
-      <p class="sr-only">{c.chat.caption}</p>
-      <div class="cchat-log">
-        <p class="cmsg is-me"><span class="sr-only">{c.chat.owner}: </span>{c.chat.q1}</p>
-        <div class="cmsg is-ai">
-          <span class="sr-only">{c.chat.assistant}: </span>
+    <ChatWindow title={c.chat.assistant} subtitle={c.chat.sub} example={d.ui.example} caption={c.chat.caption} inputPh={c.chat.inputPh}>
+      <li class="dm is-user"><span class="sr-only">{c.chat.owner}: </span><span class="dm-t">{c.chat.q1}</span></li>
+      <li class="dm is-ai dm-rich">
+        <span class="sr-only">{c.chat.assistant}: </span>
+        <div class="dm-t">
           <p>{c.chat.a1}</p>
-          <ul>{c.chat.list.map(([n, x]) => <li><b>{n}</b> — {x}</li>)}</ul>
-          <div class="cdraft">
-            <p class="tag">{c.chat.draftLabel}</p>
-            <p>{c.chat.draft}</p>
-          </div>
+          <ul class="cl-list">
+            {c.chat.list.map(([n, x]) => (
+              <li><span class="cl-av" aria-hidden="true">{initials(n)}</span><span class="cl-txt"><b>{n}</b><small>{x}</small></span></li>
+            ))}
+          </ul>
         </div>
-        <p class="cmsg is-me"><span class="sr-only">{c.chat.owner}: </span>{c.chat.q2}</p>
-      </div>
-      <p class="cchat-cap muted">{c.chat.caption}</p>
-    </figure>
+      </li>
+      <li class="dm is-ai dm-rich">
+        <span class="sr-only">{c.chat.assistant}: </span>
+        <div class="dm-t cl-draft">
+          <p class="tag">{c.chat.draftLabel}</p>
+          <p>{c.chat.draft}</p>
+          <div class="cl-actions" aria-hidden="true"><span>{c.chat.edit}</span><span class="is-primary">{c.chat.send}</span></div>
+        </div>
+      </li>
+      <li class="dm is-user"><span class="sr-only">{c.chat.owner}: </span><span class="dm-t">{c.chat.q2}</span></li>
+    </ChatWindow>
   </section>
 
   <div class="line wrap">
@@ -92,7 +99,7 @@ const schema = [{ '@type': 'Service', name: c.hero.eyebrow, description: c.descr
           <PhoneMock>
             <div class="pm">
               <div class="pm-status" aria-hidden="true"><span>08:00</span><span class="tag-example">{d.ui.example}</span></div>
-              <div class="pm-head"><span class="pm-av" aria-hidden="true">IA</span><span><b>{c.morning.sender}</b><small>{c.morning.senderSub}</small></span></div>
+              <div class="pm-head"><span class="pm-av" aria-hidden="true">{lang === 'en' ? 'AI' : 'IA'}</span><span><b>{c.morning.sender}</b><small>{c.morning.senderSub}</small></span></div>
               <div class="pm-msg">
                 <p class="sr-only">{c.morning.srIntro}</p>
                 <p class="pm-greet">{c.morning.greet}</p>
@@ -151,17 +158,16 @@ const schema = [{ '@type': 'Service', name: c.hero.eyebrow, description: c.descr
 </Base>
 
 <style>
-  .cchat { padding: 18px; display: grid; gap: 14px; width: 100%; max-width: 480px; justify-self: end; }
-  .cchat-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-bottom: 12px; border-bottom: 1px dashed var(--line-strong); }
-  .cchat-log { display: grid; gap: 10px; }
-  .cmsg { max-width: 90%; padding: 11px 14px; border-radius: 14px; font-size: 0.95rem; }
-  .cmsg.is-me { justify-self: end; background: var(--ink); color: var(--bg); border-bottom-right-radius: 4px; }
-  .cmsg.is-ai { background: var(--surface-2); border-bottom-left-radius: 4px; display: grid; gap: 8px; }
-  .cmsg ul { margin: 0; padding-left: 1.1em; display: grid; gap: 3px; }
-  .cmsg b { font-weight: 500; }
-  .cdraft { margin-top: 4px; padding: 10px 12px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--hero); display: grid; gap: 6px; }
-  .cchat-cap { font-size: 0.85rem; }
-  @media (max-width: 899px) { .cchat { justify-self: stretch; max-width: none; } }
+  .cl-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .cl-list li { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 10px; background: var(--surface-2); }
+  .cl-av { width: 30px; height: 30px; border-radius: 50%; flex: none; display: grid; place-items: center; font-family: var(--f-mono); font-size: 0.7rem; font-weight: 500; background: color-mix(in srgb, var(--hero) 35%, var(--surface)); color: var(--ink); }
+  .cl-txt { display: grid; line-height: 1.3; min-width: 0; }
+  .cl-txt b { font-weight: 500; font-size: 0.92rem; }
+  .cl-txt small { color: var(--muted); font-size: 0.82rem; }
+  .cl-draft { padding-left: 12px; border-left: 3px solid var(--hero); }
+  .cl-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .cl-actions span { padding: 6px 12px; border-radius: 8px; font-size: 0.82rem; font-weight: 500; border: 1px solid var(--line-strong); }
+  .cl-actions .is-primary { background: var(--hero); color: var(--on-hero); border-color: var(--hero); }
 
   .returns { padding: 18px; overflow: hidden; }
   .returns-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-bottom: 12px; }
@@ -182,8 +188,8 @@ const schema = [{ '@type': 'Service', name: c.hero.eyebrow, description: c.descr
 
   .morning { justify-self: end; }
   @media (max-width: 899px) { .morning { justify-self: center; } }
-  .pm { height: 100%; background: #eef1f4; color: #10182b; padding: 40px 12px 14px; display: flex; flex-direction: column; gap: 12px; font-size: 12.5px; }
-  .pm-status { display: flex; justify-content: space-between; align-items: center; font-family: var(--f-mono); font-size: 11px; padding: 0 6px; position: absolute; top: 10px; left: 18px; right: 18px; }
+  .pm { height: 100%; background: #eef1f4; color: #10182b; padding: 46px 12px 14px; display: flex; flex-direction: column; gap: 12px; font-size: 12.5px; }
+  .pm-status { display: flex; justify-content: space-between; align-items: center; font-family: var(--f-mono); font-size: 11px; position: absolute; top: 15px; left: 28px; right: 24px; }
   .pm-status .tag-example { background: #fff; color: #4a556b; font-size: 9px; padding: 1px 5px; }
   .pm-head { display: flex; gap: 10px; align-items: center; padding: 8px 6px 10px; border-bottom: 1px solid #d5dbe3; }
   .pm-head span:last-child { display: grid; line-height: 1.25; }

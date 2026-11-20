@@ -22,7 +22,7 @@ const S = {
   </button>
   <section class="chatw-panel panel" id="chatw-panel" aria-label={S.title} hidden data-chat-panel>
     <header class="chatw-head">
-      <span class="tag"><b>IA</b>{S.title}</span>
+      <span class="tag"><b>{lang === 'en' ? 'AI' : 'IA'}</b>{S.title}</span>
       <button type="button" class="chatw-close" data-chat-close aria-label={S.close}>×</button>
     </header>
     <ol class="chatw-log" aria-live="polite" data-chat-log>
