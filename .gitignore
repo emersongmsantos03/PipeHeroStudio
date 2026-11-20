@@ -1,8 +1,16 @@
-.DS_Store
-*.log
+# dependências e build
 node_modules/
 dist/
+.astro/
+
+# Netlify local
 .netlify/
+
+# ambiente e segredos
 .env
 .env.*
-__test.html
+
+# sistema
+.DS_Store
+*.log
+npm-debug.log*

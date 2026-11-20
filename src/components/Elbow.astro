@@ -1,0 +1,19 @@
+---
+/** Cotovelo do cano entre duas estações: liga o lado `from` ao lado oposto. */
+interface Props { from: 'left' | 'right' }
+const { from } = Astro.props;
+const d =
+  from === 'left'
+    ? 'M30 0V30Q30 48 48 48H952Q970 48 970 66V96'
+    : 'M970 0V30Q970 48 952 48H48Q30 48 30 66V96';
+---
+<div class="elbow" aria-hidden="true">
+  <svg class="elbow-d" viewBox="0 0 1000 96" preserveAspectRatio="none" focusable="false">
+    <path class="pipe-track" d={d} />
+    <path class="pipe-fill" d={d} pathLength="1" />
+  </svg>
+  <svg class="elbow-m" viewBox="0 0 3 100" preserveAspectRatio="none" focusable="false">
+    <path class="pipe-track" d="M1.5 0V100" />
+    <path class="pipe-fill" d="M1.5 0V100" pathLength="1" />
+  </svg>
+</div>

@@ -1,0 +1,47 @@
+---
+import Base from '../layouts/Base.astro';
+import { t, fill, esc, legalLine } from '../i18n';
+import { href, price, type Lang } from '../i18n/routes';
+import { config } from '../config';
+
+interface Props { lang: Lang; page: 'privacy' | 'terms' | 'cookies' }
+const { lang, page } = Astro.props;
+const d = t(lang);
+const doc = d[page];
+const vars = {
+  email: `<a href="mailto:${config.email}">${config.email}</a>`,
+  founder: esc(config.founder),
+  price: esc(price(lang, config.sitePrice, d.ui.onRequest)),
+  maintenance: esc(price(lang, config.maintenanceFrom, d.ui.onRequest)),
+  legal: legalLine(),
+};
+const others = (['privacy', 'terms', 'cookies'] as const).filter((p) => p !== page);
+---
+<Base lang={lang} page={page} title={doc.title} description={doc.description}>
+  <article class="wrap legal">
+    <header class="legal-head">
+      <p class="tag">{d.ui.footerLegal}</p>
+      <h1>{doc.h1}</h1>
+      <p class="muted mono legal-date">{d.ui.updated}</p>
+    </header>
+    <div class="prose">
+      {doc.sections.map(([h, ps]) => (
+        <section>
+          <h2>{h}</h2>
+          {(ps as string[]).map((p) => <p set:html={fill(p, vars).trim()} />)}
+        </section>
+      ))}
+    </div>
+    <nav class="legal-more" aria-label={d.ui.footerLegal}>
+      {others.map((p) => <a class="link" href={href(lang, p)}>{d.ui.legal[p]}</a>)}
+    </nav>
+  </article>
+</Base>
+
+<style>
+  .legal { padding-block: clamp(40px, 7vw, 88px); display: grid; gap: 24px; }
+  .legal-head { display: grid; gap: 14px; padding-bottom: 28px; border-bottom: 3px solid var(--hero); max-width: 70ch; }
+  .legal h1 { font-size: clamp(2rem, 1.3rem + 3vw, 3.4rem); }
+  .legal-date { font-size: 0.85rem; }
+  .legal-more { display: flex; gap: 24px; padding-top: 24px; border-top: 1px solid var(--line); max-width: 70ch; }
+</style>

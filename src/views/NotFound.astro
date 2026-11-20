@@ -1,0 +1,33 @@
+---
+import Base from '../layouts/Base.astro';
+import BrokenPipe from '../components/BrokenPipe.astro';
+import Arrow from '../components/Arrow.astro';
+import { t } from '../i18n';
+import { href, type Lang } from '../i18n/routes';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const d = t(lang);
+const n = d.notFound;
+---
+<Base lang={lang} page="notFound" title={n.title} description={n.description} noindex>
+  <section class="wrap nf">
+    <div class="nf-text">
+      <p class="tag"><b>404</b><span aria-hidden="true">/</span>{lang === 'en' ? 'Leak' : lang === 'es' ? 'Fuga' : 'Fuga'}</p>
+      <h1>{n.title1}</h1>
+      <p class="lead">{n.text}</p>
+      <div class="nf-cta">
+        <a class="btn btn-hero" href={href(lang, 'home')}>{n.home}<Arrow /></a>
+        <a class="btn btn-ghost" href={href(lang, 'contact')}>{n.contact}</a>
+      </div>
+    </div>
+    <BrokenPipe />
+  </section>
+</Base>
+
+<style>
+  .nf { display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); gap: clamp(32px, 5vw, 64px); align-items: center; padding-block: clamp(48px, 8vw, 112px); }
+  .nf-text { display: grid; gap: 20px; }
+  .nf-cta { display: flex; flex-wrap: wrap; gap: 12px; }
+  @media (max-width: 899px) { .nf { grid-template-columns: minmax(0, 1fr); } }
+</style>

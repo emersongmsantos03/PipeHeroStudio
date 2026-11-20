@@ -1,0 +1,41 @@
+---
+import Base from '../layouts/Base.astro';
+import Station from '../components/Station.astro';
+import ContactForm from '../components/ContactForm.astro';
+import CopyEmail from '../components/CopyEmail.astro';
+import { t } from '../i18n';
+import type { Lang } from '../i18n/routes';
+import { config } from '../config';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const d = t(lang);
+const c = d.contact;
+const wa = config.whatsapp.replace(/\D/g, '');
+---
+<Base lang={lang} page="contact" title={c.title} description={c.description}>
+  <div class="line wrap">
+    <Station side="left" name={d.ui.nav.contact} labelledby="ct-title" start end>
+      <div class="form-split">
+        <div class="st-text">
+          <h1 id="ct-title">{c.title1}</h1>
+          <p class="lead">{c.lead}</p>
+          <CopyEmail lang={lang} label={d.form.email} />
+          <dl class="ct-list">
+            <div><dt class="tag">{c.instagram}</dt><dd><a class="link" href={`https://www.instagram.com/${config.instagram}/`} rel="noopener">@{config.instagram}</a></dd></div>
+            {wa && <div><dt class="tag">WhatsApp</dt><dd><a class="link" href={`https://wa.me/${wa}`} rel="noopener">{d.ui.whatsapp}</a></dd></div>}
+            <div><dt class="tag">{c.callTitle}</dt><dd class="muted">{c.callText}</dd></div>
+          </dl>
+        </div>
+        <ContactForm lang={lang} page="contact" />
+      </div>
+    </Station>
+  </div>
+</Base>
+
+<style>
+  h1 { font-size: clamp(2.2rem, 1.4rem + 3.6vw, 4rem); }
+  .ct-list { margin: 8px 0 0; display: grid; }
+  .ct-list div { display: grid; gap: 6px; padding: 16px 0; border-top: 1px solid var(--line); }
+  .ct-list dd { margin: 0; }
+</style>

@@ -1,0 +1,117 @@
+---
+/** Mini-site de demonstração dentro do telemóvel. O hero atualiza-o em tempo real (src/scripts/builder.ts). */
+import { t } from '../i18n';
+import type { Lang } from '../i18n/routes';
+import { initials, paletteStyle, type BizType } from '../lib/minisite';
+
+interface Props { lang: Lang; name: string; type: BizType }
+const { lang, name, type } = Astro.props;
+const d = t(lang).minisite;
+const tp = d.types[type];
+---
+<div class="ms" data-type={type} style={paletteStyle(type)} data-ms>
+  <div class="ms-bar">
+    <span class="ms-logo" data-ms-logo>{initials(name)}</span>
+    <span class="ms-brand" data-ms-brand>{name}</span>
+    <span class="ms-burger" aria-hidden="true"><i></i><i></i></span>
+  </div>
+  <div class="ms-hero">
+    <div class="ms-art" aria-hidden="true"></div>
+    <p class="ms-kicker" data-ms-kicker>{tp.label}</p>
+    <p class="ms-name" data-ms-name>{name}</p>
+    <p class="ms-tagline" data-ms-tag>{tp.tagline}</p>
+    <span class="ms-cta" data-ms-cta>{tp.cta}</span>
+  </div>
+  <ul class="ms-list" data-ms-list>
+    {tp.sections.map(([h, s]) => <li><b>{h}</b><span>{s}</span></li>)}
+  </ul>
+  <div class="ms-map" aria-hidden="true"><span class="ms-pin"></span><span class="ms-map-label">{d.map}</span></div>
+  <span class="ms-wa" aria-hidden="true">
+    <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.8-1.4.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2c0 1.3.9 2.5 1 2.7.1.2 1.8 2.8 4.4 3.9 1.7.7 2.3.8 3.1.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3Z"/></svg>
+  </span>
+</div>
+
+<style is:global>
+  .ms {
+    --ms-line: color-mix(in srgb, var(--ms-fg) 16%, transparent);
+    position: relative; height: 100%;
+    background: var(--ms-bg); color: var(--ms-fg);
+    font-family: var(--f-body); font-size: 12px; line-height: 1.4;
+    padding: 40px 16px 16px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .ms-bar, .ms-hero, .ms-list { flex: none; }
+  .ms-bar { display: flex; align-items: center; gap: 8px; }
+  .ms-logo {
+    display: grid; place-items: center; width: 26px; height: 26px; border-radius: 7px;
+    background: var(--ms-accent); color: var(--ms-on);
+    font-family: var(--f-display); font-weight: 800; font-size: 10px; letter-spacing: -0.02em; flex: none;
+  }
+  .ms-brand { font-weight: 500; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .ms-burger { margin-left: auto; display: grid; gap: 4px; }
+  .ms-burger i { display: block; width: 16px; height: 2px; border-radius: 2px; background: var(--ms-fg); }
+  .ms-hero { position: relative; isolation: isolate; display: grid; gap: 8px; padding: 18px 14px 16px; border-radius: 12px; overflow: hidden; border: 1px solid var(--ms-line); }
+  .ms-art { position: absolute; inset: 0; z-index: -1; opacity: 0.22; }
+  .ms-kicker { font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ms-muted); }
+  .ms-name {
+    font-family: var(--f-display); font-weight: 800; font-size: 22px; line-height: 1.05; letter-spacing: -0.03em;
+    overflow-wrap: anywhere; min-height: 1.05em;
+  }
+  .ms-name.is-long { font-size: 17px; }
+  .ms-name.is-xlong { font-size: 14px; }
+  .ms-tagline { color: var(--ms-muted); font-size: 11.5px; max-width: 26ch; }
+  .ms-cta {
+    justify-self: start; margin-top: 4px; padding: 7px 12px; border-radius: 8px;
+    background: var(--ms-accent); color: var(--ms-on); font-weight: 500; font-size: 11px;
+  }
+  .ms-list { list-style: none; margin: 0; padding: 0; display: grid; }
+  .ms-list li { display: grid; gap: 1px; padding: 8px 2px; border-top: 1px solid var(--ms-line); }
+  .ms-list b { font-weight: 500; font-size: 12px; }
+  .ms-list span { color: var(--ms-muted); font-size: 10.5px; }
+  .ms-map {
+    position: relative; flex: 1 0 64px; border-radius: 10px; border: 1px solid var(--ms-line); overflow: hidden;
+    background:
+      linear-gradient(var(--ms-line) 1px, transparent 1px) 0 0 / 22px 22px,
+      linear-gradient(90deg, var(--ms-line) 1px, transparent 1px) 0 0 / 22px 22px;
+  }
+  .ms-map::before {
+    content: ''; position: absolute; left: -10%; right: -10%; top: 55%; height: 8px; transform: rotate(-8deg);
+    background: color-mix(in srgb, var(--ms-fg) 22%, transparent);
+  }
+  .ms-pin {
+    position: absolute; left: 58%; top: 26%; width: 16px; height: 16px; border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg); background: var(--ms-accent); border: 2px solid var(--ms-bg);
+  }
+  .ms-map-label { position: absolute; left: 8px; bottom: 6px; font-family: var(--f-mono); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ms-muted); }
+  .ms-wa {
+    position: absolute; right: 14px; bottom: 14px; width: 34px; height: 34px; border-radius: 50%;
+    display: grid; place-items: center; background: #1f9d55; color: #fff;
+    box-shadow: 0 6px 16px -6px rgb(0 0 0 / 0.45);
+  }
+  .ms-wa svg { width: 18px; height: 18px; }
+
+  /* Padrões decorativos por tipo de negócio */
+  .ms[data-type='restaurant'] .ms-art { background: repeating-radial-gradient(circle at 85% 20%, var(--ms-accent) 0 2px, transparent 3px 14px); }
+  .ms[data-type='clinic'] .ms-art { background: radial-gradient(circle at 88% 18%, var(--ms-accent) 0 26px, transparent 27px), radial-gradient(circle at 70% 0%, var(--ms-accent) 0 12px, transparent 13px); }
+  .ms[data-type='cleaning'] .ms-art { background: radial-gradient(circle at 80% 25%, var(--ms-accent) 0 9px, transparent 10px), radial-gradient(circle at 92% 50%, var(--ms-accent) 0 5px, transparent 6px), radial-gradient(circle at 70% 60%, var(--ms-accent) 0 4px, transparent 5px); }
+  .ms[data-type='garage'] .ms-art { background: repeating-linear-gradient(-45deg, var(--ms-accent) 0 6px, transparent 6px 16px); mask: linear-gradient(90deg, transparent 45%, #000); -webkit-mask: linear-gradient(90deg, transparent 45%, #000); }
+  .ms[data-type='salon'] .ms-art { background: repeating-radial-gradient(circle at 100% 0%, transparent 0 10px, var(--ms-accent) 11px 12px); }
+  .ms[data-type='other'] .ms-art { background: linear-gradient(var(--ms-accent) 1px, transparent 1px) 0 0 / 14px 14px, linear-gradient(90deg, var(--ms-accent) 1px, transparent 1px) 0 0 / 14px 14px; mask: linear-gradient(90deg, transparent 50%, #000); -webkit-mask: linear-gradient(90deg, transparent 50%, #000); }
+
+  /* Montagem: cada bloco entra por ordem quando o site muda */
+  @media (prefers-reduced-motion: no-preference) {
+    .ms.is-building .ms-bar,
+    .ms.is-building .ms-hero > *:not(.ms-art),
+    .ms.is-building .ms-list li,
+    .ms.is-building .ms-map { animation: ms-in 0.5s var(--ease) both; }
+    .ms.is-building .ms-hero > :nth-child(3) { animation-delay: 60ms; }
+    .ms.is-building .ms-hero > :nth-child(4) { animation-delay: 120ms; }
+    .ms.is-building .ms-hero > :nth-child(5) { animation-delay: 180ms; }
+    .ms.is-building .ms-list li:nth-child(1) { animation-delay: 220ms; }
+    .ms.is-building .ms-list li:nth-child(2) { animation-delay: 270ms; }
+    .ms.is-building .ms-list li:nth-child(3) { animation-delay: 320ms; }
+    .ms.is-building .ms-list li:nth-child(4) { animation-delay: 370ms; }
+    .ms.is-building .ms-map { animation-delay: 420ms; }
+  }
+  @keyframes ms-in { from { transform: translateY(10px) scale(0.97); } }
+</style>

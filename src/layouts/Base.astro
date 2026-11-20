@@ -1,0 +1,99 @@
+---
+import '../styles/global.css';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import ChatWidget from '../components/ChatWidget.astro';
+import { t } from '../i18n';
+import { LANGS, LOCALE, OG_LOCALE, absolute, href, type Lang, type PageKey } from '../i18n/routes';
+import { config } from '../config';
+
+interface Props {
+  lang: Lang;
+  page: PageKey;
+  title: string;
+  description: string;
+  schema?: Record<string, unknown>[];
+  noindex?: boolean;
+}
+const { lang, page, title, description, schema = [], noindex = false } = Astro.props;
+const d = t(lang);
+const canonical = absolute(href(lang, page));
+const ogImage = absolute(`/og/${lang}.png`);
+const orgId = `${config.siteUrl}/#org`;
+
+const graph = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': orgId,
+      name: config.brand,
+      url: config.siteUrl,
+      email: config.email,
+      logo: absolute('/apple-touch-icon.png'),
+      slogan: d.brandLine,
+      founder: { '@type': 'Person', name: config.founder },
+      sameAs: [`https://www.instagram.com/${config.instagram}/`],
+    },
+    {
+      '@type': 'WebPage',
+      '@id': canonical,
+      url: canonical,
+      name: title,
+      description,
+      inLanguage: LOCALE[lang],
+      isPartOf: { '@type': 'WebSite', name: config.brand, url: config.siteUrl },
+      publisher: { '@id': orgId },
+    },
+    ...schema.map((s) => ({ provider: { '@id': orgId }, ...s })),
+  ],
+};
+const chatOn = config.chatEnabled && !!config.chatWebhook;
+---
+<!doctype html>
+<html lang={LOCALE[lang]}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    {noindex ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={canonical} />}
+    {!noindex && LANGS.map((l) => <link rel="alternate" hreflang={LOCALE[l]} href={absolute(href(l, page))} />)}
+    {!noindex && <link rel="alternate" hreflang="x-default" href={absolute(href('en', page))} />}
+    <meta name="theme-color" content="#eef1f4" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0b1120" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="preload" href="/fonts/unbounded-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin fetchpriority="high" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Pipe Hero Studio" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={d.brandLine} />
+    <meta property="og:locale" content={OG_LOCALE[lang]} />
+    {LANGS.filter((l) => l !== lang).map((l) => <meta property="og:locale:alternate" content={OG_LOCALE[l]} />)}
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(graph)} />
+  </head>
+  <body>
+    <a class="skip" href="#main">{d.ui.skip}</a>
+    <Header lang={lang} page={page} />
+    <main id="main" tabindex="-1">
+      <slot />
+    </main>
+    <Footer lang={lang} />
+    {chatOn && <ChatWidget lang={lang} />}
+    <script is:inline>
+      document.addEventListener('click', function (e) {
+        var a = e.target && e.target.closest ? e.target.closest('[data-lang]') : null;
+        if (a) { try { localStorage.setItem('phs-lang', a.getAttribute('data-lang')); } catch (_) {} }
+      });
+    </script>
+  </body>
+</html>

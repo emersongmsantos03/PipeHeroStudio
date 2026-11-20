@@ -1,0 +1,158 @@
+---
+/**
+ * Formulário de contacto.
+ * Envia para config.formWebhook (n8n). Se estiver vazio, usa o Netlify Forms.
+ */
+import { t, fill } from '../i18n';
+import { href, type Lang, type PageKey } from '../i18n/routes';
+import { config } from '../config';
+
+type Service = 'site' | 'chat' | 'crm' | 'agents' | 'clinics' | 'unsure';
+interface Props { lang: Lang; page: PageKey; service?: Service; id?: string }
+const { lang, page, service, id = 'pedido' } = Astro.props;
+const d = t(lang);
+const f = d.form;
+const netlify = !config.formWebhook;
+const types = Object.fromEntries(Object.entries(d.minisite.types).map(([k, v]) => [k, v.label]));
+const msgs = {
+  ...f.errors,
+  sending: f.sending,
+  successTitle: f.successTitle,
+  successText: f.successText,
+  fail: fill(f.fail, { email: config.email }),
+  localOnly: f.localOnly,
+  prefill: f.prefill,
+  types,
+};
+const p = `${id}-`;
+const privacyHtml = fill(f.privacy, {
+  link: `<a class="link" href="${href(lang, 'privacy')}">${f.privacyLink}</a>`,
+});
+const services = Object.entries(f.services) as [Service, string][];
+---
+<div class="form-root" data-form-root>
+  <form
+    class="form panel"
+    id={id}
+    name="contacto"
+    method="POST"
+    action={netlify ? href(lang, 'contact') + '?enviado=1' : config.formWebhook}
+    data-form
+    data-endpoint={netlify ? '/' : config.formWebhook}
+    data-netlify-mode={netlify ? '1' : '0'}
+    data-i18n={JSON.stringify(msgs)}
+    data-netlify={netlify ? 'true' : undefined}
+    netlify-honeypot={netlify ? 'bot-field' : undefined}
+    novalidate
+  >
+    {netlify && <input type="hidden" name="form-name" value="contacto" />}
+    <input type="hidden" name="idioma" value={lang} />
+    <input type="hidden" name="pagina" value={page} />
+    <input type="hidden" name="tipo" value="" />
+    <p hidden><label>{f.honeypot} <input name="bot-field" tabindex="-1" autocomplete="off" /></label></p>
+
+    <p class="form-prefill" data-prefill hidden></p>
+
+    <div class="form-grid">
+      <div class="field">
+        <label for={p + 'nome'}>{f.name} <span aria-hidden="true">*</span></label>
+        <input id={p + 'nome'} name="nome" type="text" autocomplete="name" required aria-describedby={p + 'nome-error'} />
+        <p class="field-error" id={p + 'nome-error'}></p>
+      </div>
+      <div class="field">
+        <label for={p + 'negocio'}>{f.business} <span aria-hidden="true">*</span></label>
+        <input id={p + 'negocio'} name="negocio" type="text" autocomplete="organization" placeholder={f.businessPh} required aria-describedby={p + 'negocio-error'} />
+        <p class="field-error" id={p + 'negocio-error'}></p>
+      </div>
+      <div class="field">
+        <label for={p + 'email'}>{f.email} <span aria-hidden="true">*</span></label>
+        <input id={p + 'email'} name="email" type="email" autocomplete="email" inputmode="email" required aria-describedby={p + 'email-error'} />
+        <p class="field-error" id={p + 'email-error'}></p>
+      </div>
+      <div class="field">
+        <label for={p + 'telefone'}>{f.phone} <span class="opt">({f.optional})</span></label>
+        <input id={p + 'telefone'} name="telefone" type="tel" autocomplete="tel" inputmode="tel" aria-describedby={p + 'telefone-error'} />
+        <p class="field-error" id={p + 'telefone-error'}></p>
+      </div>
+      <div class="field">
+        <label for={p + 'pais'}>{f.country} <span aria-hidden="true">*</span></label>
+        <input id={p + 'pais'} name="pais" type="text" autocomplete="country-name" list={p + 'paises'} required aria-describedby={p + 'pais-error'} />
+        <datalist id={p + 'paises'}>{f.countries.map((c) => <option value={c} />)}</datalist>
+        <p class="field-error" id={p + 'pais-error'}></p>
+      </div>
+      <div class="field">
+        <label for={p + 'servico'}>{f.service} <span aria-hidden="true">*</span></label>
+        <select id={p + 'servico'} name="servico" required aria-describedby={p + 'servico-error'}>
+          <option value="" selected={!service}>{f.servicePh}</option>
+          {services.map(([k, label]) => <option value={k} selected={service === k}>{label}</option>)}
+        </select>
+        <p class="field-error" id={p + 'servico-error'}></p>
+      </div>
+      <div class="field field-full">
+        <label for={p + 'mensagem'}>{f.message} <span aria-hidden="true">*</span></label>
+        <textarea id={p + 'mensagem'} name="mensagem" rows="4" placeholder={f.messagePh} required aria-describedby={p + 'mensagem-error'}></textarea>
+        <p class="field-error" id={p + 'mensagem-error'}></p>
+      </div>
+      <div class="field field-full field-check">
+        <input id={p + 'privacidade'} name="privacidade" type="checkbox" value="sim" required aria-describedby={p + 'privacidade-error'} />
+        <label for={p + 'privacidade'} set:html={privacyHtml + ' <span aria-hidden="true">*</span>'} />
+        <p class="field-error" id={p + 'privacidade-error'}></p>
+      </div>
+    </div>
+
+    <div class="form-foot">
+      <button type="submit" class="btn btn-hero" data-submit>
+        {f.submit}
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13m-5-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+      </button>
+      <p class="form-note">{f.requiredNote}</p>
+    </div>
+    <p class="form-status" role="status" aria-live="polite" data-status></p>
+  </form>
+
+  <div class="form-success panel" data-success tabindex="-1" hidden>
+    <span class="success-mark" aria-hidden="true"></span>
+    <p class="h2" data-success-title></p>
+    <p class="muted" data-success-text></p>
+  </div>
+</div>
+
+<script>
+  import '../scripts/form';
+</script>
+
+<style is:global>
+  .form { padding: clamp(20px, 3vw, 32px); display: grid; gap: 20px; }
+  .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 18px; }
+  .field { display: grid; gap: 6px; align-content: start; }
+  .field-full { grid-column: 1 / -1; }
+  .field label { font-weight: 500; font-size: 0.95rem; }
+  .field .opt { font-weight: 400; color: var(--muted); }
+  .field input:not([type='checkbox']), .field select, .field textarea {
+    width: 100%; min-height: 48px; padding: 11px 14px;
+    background: var(--bg); border: 1.5px solid var(--line-strong); border-radius: 8px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .field textarea { resize: vertical; min-height: 112px; }
+  .field input::placeholder, .field textarea::placeholder { color: var(--muted); opacity: 0.85; }
+  .field input:focus-visible, .field select:focus-visible, .field textarea:focus-visible {
+    outline: none; border-color: var(--ink); box-shadow: 0 0 0 3px color-mix(in srgb, var(--hero) 70%, transparent);
+  }
+  .field [aria-invalid='true'] { border-color: var(--danger) !important; }
+  .field-error { color: var(--danger); font-size: 0.88rem; min-height: 0; }
+  .field-error:empty { display: none; }
+  .field-check { grid-template-columns: 24px 1fr; align-items: start; column-gap: 12px; }
+  .field-check input { width: 22px; height: 22px; margin: 2px 0 0; accent-color: var(--ink); }
+  .field-check label { font-weight: 400; }
+  .field-check .field-error { grid-column: 2; }
+  .form-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
+  .form-note { font-size: 0.88rem; color: var(--muted); }
+  .form-status { font-weight: 500; }
+  .form-status:empty { display: none; }
+  .form-prefill { font-family: var(--f-mono); font-size: 0.82rem; padding: 10px 12px; border-radius: 8px; background: color-mix(in srgb, var(--hero) 22%, var(--surface)); border: 1px solid color-mix(in srgb, var(--hero) 60%, transparent); }
+  .form-success { padding: clamp(24px, 4vw, 40px); display: grid; gap: 12px; }
+  .form-success:focus { outline: none; }
+  .success-mark { width: 44px; height: 44px; border-radius: 12px; background: var(--hero); position: relative; }
+  .success-mark::after { content: ''; position: absolute; left: 15px; top: 9px; width: 10px; height: 19px; border: solid var(--on-hero); border-width: 0 3px 3px 0; transform: rotate(45deg); }
+  @media (max-width: 640px) { .form-grid { grid-template-columns: minmax(0, 1fr); } }
+</style>

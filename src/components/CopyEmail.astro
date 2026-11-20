@@ -1,0 +1,57 @@
+---
+import { t } from '../i18n';
+import type { Lang } from '../i18n/routes';
+import { config } from '../config';
+
+interface Props { lang: Lang; label?: string }
+const { lang, label } = Astro.props;
+const d = t(lang);
+---
+<div class="copy-email" data-copy-root data-ok={d.ui.copied} data-fail={d.ui.copyFail}>
+  {label && <p class="tag">{label}</p>}
+  <div class="ce-row">
+    <a class="link ce-addr" href={`mailto:${config.email}`}>{config.email}</a>
+    <button type="button" class="btn btn-ghost ce-btn" data-copy={config.email}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.8" /><path d="M5 15V6a2 2 0 0 1 2-2h8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>
+      {d.ui.copy}
+    </button>
+  </div>
+  <p class="ce-status" role="status" aria-live="polite" data-copy-status></p>
+</div>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-copy-root]').forEach((root) => {
+    const btn = root.querySelector<HTMLButtonElement>('[data-copy]')!;
+    const out = root.querySelector<HTMLElement>('[data-copy-status]')!;
+    const value = btn.dataset.copy || '';
+    const legacy = () => {
+      const ta = document.createElement('textarea');
+      ta.value = value;
+      ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;opacity:0';
+      document.body.appendChild(ta);
+      ta.select();
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch { ok = false; }
+      ta.remove();
+      return ok;
+    };
+    btn.addEventListener('click', async () => {
+      let ok = false;
+      try {
+        if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(value); ok = true; }
+        else ok = legacy();
+      } catch { ok = legacy(); }
+      out.textContent = (ok ? root.dataset.ok : root.dataset.fail) || '';
+    });
+  });
+</script>
+
+<style>
+  .copy-email { display: grid; gap: 10px; }
+  .ce-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+  .ce-addr { font-family: var(--f-mono); font-size: clamp(0.92rem, 0.85rem + 0.4vw, 1.08rem); overflow-wrap: anywhere; }
+  .ce-btn { min-height: 40px; padding: 8px 14px; font-size: 0.92rem; }
+  .ce-status { font-size: 0.9rem; color: var(--muted); }
+  .ce-status:empty { display: none; }
+</style>

@@ -1,0 +1,293 @@
+---
+import Base from '../layouts/Base.astro';
+import Station from '../components/Station.astro';
+import Elbow from '../components/Elbow.astro';
+import PhoneMock from '../components/PhoneMock.astro';
+import MiniSite from '../components/MiniSite.astro';
+import ContactForm from '../components/ContactForm.astro';
+import CopyEmail from '../components/CopyEmail.astro';
+import Testimonials from '../components/Testimonials.astro';
+import Arrow from '../components/Arrow.astro';
+import { t, fill } from '../i18n';
+import { href, price, type Lang, type PageKey } from '../i18n/routes';
+import { BIZ_TYPES, type BizType } from '../lib/minisite';
+import { config } from '../config';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const d = t(lang);
+const h = d.home;
+const sitePrice = price(lang, config.sitePrice, d.ui.onRequest);
+const ex = d.minisite.heroExamples;
+const first = ex[0];
+
+/* Textos curtos dos mockups das estações (fictícios, marcados "Exemplo"). */
+const V = {
+  pt: {
+    ticket: 'Pedido · Site', steps: ['Conversa de 15 min', 'Construção', 'Aprovação', 'Publicação'], stepState: ['feito', '48 h', 'a seguir', '—'], priceLabel: 'Só paga se gostar',
+    chat: [['user', 'Ainda têm mesa para sábado às 20h?'], ['ai', 'Sou o assistente de IA da Tasca do Largo. Tenho mesa às 20h15 para 4. Fica reservada em que nome?'], ['sys', 'Contacto guardado · enviado para a equipa']],
+    cols: ['Novo', 'Contactado', 'Proposta'], cards: [['Rita M.', 'Site'], ['João P.', 'WhatsApp'], ['Ana L.', 'Formulário'], ['Pedro S.', 'Site']],
+    log: [['08:00', 'Resumo do dia enviado'], ['09:12', 'Marcação confirmada'], ['11:40', 'Lembrete enviado para amanhã'], ['14:05', 'Conversa passada à equipa']],
+  },
+  en: {
+    ticket: 'Request · Website', steps: ['15-min call', 'Build', 'Approval', 'Go live'], stepState: ['done', '48 h', 'next', '—'], priceLabel: 'Pay only if you like it',
+    chat: [['user', 'Do you have a table for Saturday at 8pm?'], ['ai', "I'm The Corner Table's AI assistant. I have a table for 4 at 8:15pm. What name should I book it under?"], ['sys', 'Contact saved · sent to the team']],
+    cols: ['New', 'Contacted', 'Proposal'], cards: [['Rachel M.', 'Website'], ['James P.', 'WhatsApp'], ['Anna L.', 'Form'], ['Peter S.', 'Website']],
+    log: [['08:00', 'Daily summary sent'], ['09:12', 'Booking confirmed'], ['11:40', 'Reminder sent for tomorrow'], ['14:05', 'Conversation handed to the team']],
+  },
+  es: {
+    ticket: 'Solicitud · Web', steps: ['Llamada de 15 min', 'Construcción', 'Aprobación', 'Publicación'], stepState: ['hecho', '48 h', 'siguiente', '—'], priceLabel: 'Solo pagas si te gusta',
+    chat: [['user', '¿Os queda mesa para el sábado a las 21:00?'], ['ai', 'Soy el asistente de IA de Taberna del Puerto. Tengo mesa para 4 a las 21:15. ¿A nombre de quién la reservo?'], ['sys', 'Contacto guardado · enviado al equipo']],
+    cols: ['Nuevo', 'Contactado', 'Propuesta'], cards: [['Rocío M.', 'Web'], ['Javier P.', 'WhatsApp'], ['Ana L.', 'Formulario'], ['Pablo S.', 'Web']],
+    log: [['08:00', 'Resumen del día enviado'], ['09:12', 'Cita confirmada'], ['11:40', 'Recordatorio enviado para mañana'], ['14:05', 'Conversación pasada al equipo']],
+  },
+}[lang];
+
+const builderData = {
+  types: d.minisite.types,
+  examples: ex,
+  example: d.ui.example,
+  yourPreview: d.hero.yourPreview,
+  live: d.hero.live,
+};
+const sides = ['left', 'right', 'left', 'right'] as const;
+---
+<Base lang={lang} page="home" title={h.title} description={h.description}>
+  <section class="hero wrap" aria-labelledby="hero-title" data-builder-root>
+    <div class="hero-text">
+      <p class="tag">{d.hero.eyebrow}</p>
+      <h1 id="hero-title">{d.hero.title}</h1>
+      <p class="lead">{d.brandLine}</p>
+
+      <form class="builder panel" action={href(lang, 'sites')} method="get" data-builder>
+        <div class="b-row">
+          <div class="field">
+            <label for="b-name">{d.hero.nameLabel}</label>
+            <input id="b-name" name="nome" type="text" maxlength="40" autocomplete="organization" placeholder={d.hero.namePh} data-builder-name />
+          </div>
+          <div class="field">
+            <label for="b-type">{d.hero.typeLabel}</label>
+            <select id="b-type" name="tipo" data-builder-type>
+              {BIZ_TYPES.map((k) => <option value={k}>{d.minisite.types[k].label}</option>)}
+            </select>
+          </div>
+        </div>
+        <p class="b-note">{d.hero.ctaNote}</p>
+        <button type="submit" class="btn btn-hero">{d.hero.cta}<Arrow /></button>
+      </form>
+    </div>
+
+    <figure class="hero-phone">
+      <div class="hp-top">
+        <span class="tag-example" data-builder-badge>{d.ui.example}</span>
+        <div class="b-dots" role="group" aria-label={d.hero.examplesLabel}>
+          {ex.map((_, i) => (
+            <button type="button" aria-label={fill(d.hero.showExample, { n: String(i + 1) })} aria-pressed={i === 0 ? 'true' : 'false'} data-example={i}></button>
+          ))}
+        </div>
+      </div>
+      <PhoneMock>
+        <MiniSite lang={lang} name={first.name} type={first.type as BizType} />
+      </PhoneMock>
+      <figcaption class="sr-only">{d.minisite.preview}</figcaption>
+      <p class="sr-only" aria-live="polite" data-builder-live></p>
+    </figure>
+    <script is:inline type="application/json" data-builder-data set:html={JSON.stringify(builderData)} />
+  </section>
+
+  <div class="line wrap">
+    {h.stations.map((s, i) => (
+      <>
+        <Station side={sides[i]} code={s.code} name={s.name} labelledby={`st-${s.code}`} start={i === 0}>
+          <div class="st-grid">
+            <div class="st-text">
+              <h2 id={`st-${s.code}`}>{s.title}</h2>
+              <p class="lead">{s.text}</p>
+              <div class="changes">
+                <p class="tag">{d.ui.changes}</p>
+                <ul class="ticks">{s.changes.map((c) => <li>{fill(c, { price: sitePrice })}</li>)}</ul>
+              </div>
+              <p class="st-links">
+                <a class="link link-arrow" href={href(lang, s.to as PageKey, s.hash)}>{s.link}<Arrow /></a>
+                {s.code === '04' && <a class="link link-arrow" href={href(lang, 'clinics')}>{h.clinicsLink}<Arrow /></a>}
+              </p>
+            </div>
+
+            <div class="st-visual">
+              {s.code === '01' && (
+                <div class="viz viz-ticket panel">
+                  <div class="viz-head"><span class="tag">{V.ticket}</span><span class="tag-example">{d.ui.example}</span></div>
+                  <ol class="tk-steps">
+                    {V.steps.map((st, j) => (
+                      <li data-state={j === 0 ? 'done' : j === 1 ? 'now' : 'todo'}><span>{st}</span><b class="mono">{V.stepState[j]}</b></li>
+                    ))}
+                  </ol>
+                  <div class="tk-price"><span class="h2">{sitePrice}</span><span class="muted">{V.priceLabel}</span></div>
+                </div>
+              )}
+              {s.code === '02' && (
+                <div class="viz viz-chat panel">
+                  <div class="viz-head"><span class="tag"><b>IA</b>Chat</span><span class="tag-example">{d.ui.example}</span></div>
+                  <div class="vc-log">
+                    {V.chat.map(([who, txt]) => <p class={`vc-msg is-${who}`}>{txt}</p>)}
+                  </div>
+                </div>
+              )}
+              {s.code === '03' && (
+                <div class="viz viz-board panel">
+                  <div class="viz-head"><span class="tag">CRM</span><span class="tag-example">{d.ui.example}</span></div>
+                  <div class="vb-cols">
+                    {V.cols.map((c, j) => (
+                      <div class="vb-col">
+                        <p class="vb-title mono">{c}</p>
+                        {V.cards.filter((_, k) => (j === 0 ? k < 2 : j === 1 ? k === 2 : k === 3)).map(([n, src]) => (
+                          <p class="vb-card"><b>{n}</b><span>{src}</span></p>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {s.code === '04' && (
+                <div class="viz viz-log panel">
+                  <div class="viz-head"><span class="tag"><b>IA</b>Agente</span><span class="tag-example">{d.ui.example}</span></div>
+                  <ol class="vl-list">
+                    {V.log.map(([time, txt]) => <li><span class="mono">{time}</span><span>{txt}</span></li>)}
+                  </ol>
+                </div>
+              )}
+            </div>
+          </div>
+        </Station>
+        <Elbow from={sides[i]} />
+      </>
+    ))}
+
+    <Station side="left" name={h.how.name} labelledby="st-how">
+      <div class="station-head"><h2 id="st-how">{h.how.title}</h2></div>
+      <ol class="steps">
+        {h.how.steps.map(([title, text], i) => (
+          <li><span class="mono step-n">{String(i + 1).padStart(2, '0')}</span><h3>{title}</h3><p class="muted">{text}</p></li>
+        ))}
+      </ol>
+    </Station>
+    <Elbow from="left" />
+
+    <Station side="right" name={h.about.name} labelledby="st-about">
+      <div class="st-grid">
+        <div class="st-text">
+          <h2 id="st-about">{h.about.title}</h2>
+          {h.about.paragraphs.map((p, i) => <p class={i === 0 ? 'lead' : ''}>{p}</p>)}
+        </div>
+        <div class="st-visual">
+          <dl class="spec panel">
+            {h.about.facts.map(([k, v]) => <div><dt class="tag">{k}</dt><dd>{v}</dd></div>)}
+            <div><dt class="tag">Instagram</dt><dd><a class="link" href={`https://www.instagram.com/${config.instagram}/`} rel="noopener">@{config.instagram}</a></dd></div>
+          </dl>
+        </div>
+      </div>
+      <Testimonials lang={lang} />
+    </Station>
+    <Elbow from="right" />
+
+    <Station side="left" name={h.contact.name} labelledby="st-contact" end id="contacto">
+      <div class="st-grid contact-grid">
+        <div class="st-text">
+          <h2 id="st-contact">{h.contact.title}</h2>
+          <p class="lead">{h.contact.text}</p>
+          <CopyEmail lang={lang} label={d.form.emailAlt} />
+        </div>
+        <ContactForm lang={lang} page="home" />
+      </div>
+    </Station>
+  </div>
+</Base>
+
+<script>
+  import '../scripts/builder';
+</script>
+
+<style>
+  .hero {
+    display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: clamp(32px, 5vw, 72px);
+    align-items: center; padding-block: clamp(40px, 7vw, 96px) clamp(32px, 5vw, 64px);
+  }
+  .hero-text { display: grid; gap: 20px; }
+  .hero h1 { max-width: 12ch; }
+  .builder { display: grid; gap: 16px; padding: clamp(18px, 2.5vw, 26px); margin-top: 12px; max-width: 620px; }
+  .b-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 14px; }
+  .builder .field { display: grid; gap: 6px; }
+  .builder label { font-weight: 500; font-size: 0.95rem; }
+  .builder input, .builder select {
+    width: 100%; min-height: 52px; padding: 12px 14px; background: var(--bg);
+    border: 1.5px solid var(--line-strong); border-radius: 8px; font-size: 1.05rem;
+  }
+  .builder input:focus-visible, .builder select:focus-visible { outline: none; border-color: var(--ink); box-shadow: 0 0 0 3px color-mix(in srgb, var(--hero) 70%, transparent); }
+  .builder input::placeholder { color: var(--muted); opacity: 0.8; }
+  .b-note { font-weight: 500; }
+  .builder .btn { justify-self: start; }
+  .hero-phone { display: grid; justify-items: center; gap: 14px; }
+  .hp-top { display: flex; align-items: center; justify-content: space-between; width: min(100%, 290px); min-height: 28px; }
+  .b-dots { display: flex; gap: 4px; }
+  .b-dots button { width: 32px; height: 32px; border: 0; background: none; padding: 0; cursor: pointer; display: grid; place-items: center; border-radius: 8px; }
+  .b-dots button::before { content: ''; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--muted); transition: background-color 0.2s, border-color 0.2s, width 0.25s; }
+  .b-dots button[aria-pressed='true']::before { width: 22px; border-radius: 6px; background: var(--hero); border-color: var(--ink); }
+  @media (max-width: 899px) {
+    .hero { grid-template-columns: minmax(0, 1fr); }
+    .hero-phone :global(.phone) { --phone-w: 270px; }
+  }
+  @media (max-width: 560px) { .b-row { grid-template-columns: minmax(0, 1fr); } .builder .btn { justify-self: stretch; } }
+
+  .changes { display: grid; gap: 12px; padding-top: 6px; }
+  .st-links { display: flex; flex-wrap: wrap; gap: 10px 24px; }
+
+  /* Mockups das estações */
+  .viz { padding: 18px; display: grid; gap: 14px; max-width: 520px; width: 100%; }
+  .station[data-side='left'] .st-visual { justify-self: end; width: 100%; display: grid; justify-items: end; }
+  .station[data-side='right'] .st-visual { justify-self: start; width: 100%; display: grid; justify-items: start; }
+  .viz-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 12px; border-bottom: 1px dashed var(--line-strong); }
+  .tk-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: s; }
+  .tk-steps li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; }
+  .tk-steps li b { font-weight: 500; font-size: 0.82rem; color: var(--muted); }
+  .tk-steps li[data-state='done'] span { text-decoration: line-through; text-decoration-color: var(--muted); color: var(--muted); }
+  .tk-steps li[data-state='now'] { background: color-mix(in srgb, var(--hero) 28%, var(--surface)); box-shadow: inset 3px 0 0 var(--hero); }
+  .tk-steps li[data-state='now'] b { color: var(--ink); }
+  .tk-price { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-top: 12px; border-top: 1px dashed var(--line-strong); flex-wrap: wrap; }
+  .tk-price .h2 { font-size: clamp(1.8rem, 1.4rem + 1.6vw, 2.6rem); }
+
+  .vc-log { display: grid; gap: 10px; }
+  .vc-msg { max-width: 86%; padding: 10px 13px; border-radius: 14px; font-size: 0.95rem; }
+  .vc-msg.is-user { justify-self: end; background: var(--ink); color: var(--bg); border-bottom-right-radius: 4px; }
+  .vc-msg.is-ai { background: var(--surface-2); border-bottom-left-radius: 4px; }
+  .vc-msg.is-sys { justify-self: center; font-family: var(--f-mono); font-size: 0.75rem; letter-spacing: 0.04em; color: var(--muted); padding: 4px 10px; border: 1px dashed var(--line-strong); border-radius: 999px; }
+
+  .vb-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .vb-col { display: grid; gap: 8px; align-content: start; padding: 10px; border-radius: 8px; background: var(--surface-2); min-height: 150px; }
+  .vb-title { font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .vb-card { display: grid; gap: 2px; padding: 8px 10px; border-radius: 7px; background: var(--surface); border: 1px solid var(--line); font-size: 0.88rem; }
+  .vb-card b { font-weight: 500; }
+  .vb-card span { font-family: var(--f-mono); font-size: 0.7rem; color: var(--muted); }
+  .vb-col:first-child .vb-card:first-of-type { box-shadow: inset 3px 0 0 var(--hero); }
+
+  .vl-list { list-style: none; margin: 0; padding: 0; display: grid; }
+  .vl-list li { display: grid; grid-template-columns: 56px 1fr; gap: 12px; padding: 11px 0; border-top: 1px solid var(--line); }
+  .vl-list li:first-child { border-top: 0; }
+  .vl-list .mono { color: var(--muted); font-size: 0.85rem; }
+
+  .steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; }
+  .steps li { display: grid; gap: 10px; align-content: start; padding: 22px 20px 0 0; border-top: 2px solid var(--line); position: relative; }
+  .steps li::before { content: ''; position: absolute; top: -6px; left: 0; width: 10px; height: 10px; border-radius: 3px; background: var(--hero); }
+  .step-n { font-size: 0.8rem; color: var(--muted); }
+  @media (max-width: 899px) {
+    .steps { grid-template-columns: minmax(0, 1fr); gap: 22px; }
+    .station[data-side] .st-visual { justify-self: stretch; justify-items: stretch; }
+    .viz { max-width: none; }
+  }
+
+  .spec { margin: 0; padding: 8px 20px; width: 100%; max-width: 440px; }
+  .spec div { display: grid; grid-template-columns: 120px 1fr; gap: 12px; padding: 14px 0; border-top: 1px solid var(--line); align-items: baseline; }
+  .spec div:first-child { border-top: 0; }
+  .spec dd { margin: 0; font-weight: 500; }
+  .contact-grid { align-items: start; grid-template-columns: minmax(0, 4fr) minmax(0, 6fr) !important; }
+  @media (max-width: 899px) { .contact-grid { grid-template-columns: minmax(0, 1fr) !important; } }
+</style>

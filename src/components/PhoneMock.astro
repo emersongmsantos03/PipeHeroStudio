@@ -1,0 +1,45 @@
+---
+/** Moldura de telemóvel. O conteúdo vai no slot. */
+interface Props { size?: 'md' | 'lg'; class?: string }
+const { size = 'md', class: cls } = Astro.props;
+---
+<div class:list={['phone', `phone-${size}`, cls]}>
+  <div class="phone-screen">
+    <span class="phone-notch" aria-hidden="true"></span>
+    <slot />
+  </div>
+</div>
+
+<style is:global>
+  .phone {
+    --phone-w: 290px;
+    width: min(100%, var(--phone-w));
+    aspect-ratio: 9 / 18.6;
+    padding: 10px;
+    border-radius: 46px;
+    background: #10182b;
+    box-shadow:
+      0 0 0 1px rgb(255 255 255 / 0.06) inset,
+      0 0 0 1px var(--line),
+      0 40px 80px -40px rgb(16 24 43 / 0.45);
+    position: relative;
+    flex: none;
+  }
+  .phone-lg { --phone-w: 340px; }
+  .phone-screen {
+    position: relative;
+    height: 100%;
+    border-radius: 36px;
+    overflow: hidden;
+    background: #fff;
+    isolation: isolate;
+  }
+  .phone-notch {
+    position: absolute; z-index: 5; top: 9px; left: 50%; width: 84px; height: 22px; margin-left: -42px;
+    border-radius: 12px; background: #10182b;
+  }
+  @media (prefers-color-scheme: dark) {
+    .phone { background: #05080f; box-shadow: 0 0 0 1px #2a3753, 0 40px 80px -40px rgb(0 0 0 / 0.7); }
+    .phone-notch { background: #05080f; }
+  }
+</style>

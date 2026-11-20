@@ -1,0 +1,49 @@
+---
+/* Piada visual do 404: o cano partiu-se e o "lead" caiu na poça. */
+---
+<figure class="bp" aria-hidden="true">
+  <svg viewBox="0 0 420 330" focusable="false">
+    <!-- cano que vem da página -->
+    <path class="bp-outer" d="M0 70H178Q202 70 202 94V150" />
+    <path class="bp-inner" d="M0 70H178Q202 70 202 94V150" />
+    <path class="bp-break" d="M188 150l5 9 6-7 5 8 5-6 4 6V146h-25z" />
+    <!-- rachas -->
+    <path class="bp-crack" d="M176 150l-10 8M228 150l10 7M180 162l-6 12" />
+    <!-- pedaço caído -->
+    <g transform="rotate(-9 320 268)">
+      <path class="bp-outer" d="M262 268H412" />
+      <path class="bp-inner" d="M262 268H412" />
+      <path class="bp-break" d="M262 256l-6 5 5 4-6 5 6 4-5 4h12v-22z" />
+    </g>
+    <!-- poça e o lead caído -->
+    <ellipse class="bp-puddle" cx="206" cy="300" rx="92" ry="11" />
+    <rect class="bp-lead" x="-6" y="-14" width="12" height="28" rx="5" transform="translate(150 293) rotate(78)" />
+    <!-- gotas: caem uma vez -->
+    <circle class="bp-drop" cx="202" cy="166" r="6" style="--d:0s" />
+    <circle class="bp-drop" cx="202" cy="166" r="5" style="--d:0.7s" />
+    <circle class="bp-drop" cx="202" cy="166" r="4" style="--d:1.4s" />
+  </svg>
+</figure>
+
+<style>
+  .bp { width: 100%; max-width: 460px; justify-self: center; }
+  .bp svg { width: 100%; height: auto; overflow: visible; }
+  .bp-outer { fill: none; stroke: var(--ink); stroke-width: 22; }
+  .bp-inner { fill: none; stroke: var(--hero); stroke-width: 9; }
+  .bp-break { fill: var(--bg); }
+  .bp-crack { fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; }
+  .bp-puddle { fill: var(--hero); }
+  .bp-lead { fill: var(--hero); stroke: var(--ink); stroke-width: 2.5; }
+  .bp-drop { fill: var(--hero); opacity: 0; }
+  @media (prefers-reduced-motion: no-preference) {
+    .bp-drop { animation: bp-fall 0.9s cubic-bezier(0.55, 0, 1, 0.45) var(--d) 1 both; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bp-drop:first-of-type { opacity: 1; transform: translateY(40px); }
+  }
+  @keyframes bp-fall {
+    0% { opacity: 1; transform: translateY(0); }
+    90% { opacity: 1; }
+    100% { opacity: 0; transform: translateY(128px); }
+  }
+</style>

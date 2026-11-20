@@ -1,0 +1,60 @@
+---
+import Logo from './Logo.astro';
+import { t } from '../i18n';
+import { LANGS, LOCALE, href, type Lang, type PageKey } from '../i18n/routes';
+
+interface Props { lang: Lang; page: PageKey }
+const { lang, page } = Astro.props;
+const d = t(lang);
+const nav: { key: PageKey; label: string }[] = [
+  { key: 'sites', label: d.ui.nav.sites },
+  { key: 'crm', label: d.ui.nav.crm },
+  { key: 'agents', label: d.ui.nav.agents },
+  { key: 'clinics', label: d.ui.nav.clinics },
+  { key: 'contact', label: d.ui.nav.contact },
+];
+const langPage: PageKey = page;
+---
+<header class="site-header">
+  <div class="wrap header-in">
+    <a class="brand" href={href(lang, 'home')} aria-label={d.ui.homeLabel}>
+      <Logo />
+      <span class="brand-name">Pipe Hero Studio</span>
+    </a>
+
+    <nav class="nav-main" aria-label={d.ui.navLabel}>
+      <ul>
+        {nav.map((n) => (
+          <li><a href={href(lang, n.key)} aria-current={page === n.key ? 'page' : undefined}>{n.label}</a></li>
+        ))}
+      </ul>
+    </nav>
+
+    <details class="menu">
+      <summary><span aria-hidden="true"><i></i><i></i></span>{d.ui.menu}</summary>
+      <nav class="menu-panel" aria-label={d.ui.navLabel}>
+        <ul>
+          {nav.map((n) => (
+            <li><a href={href(lang, n.key)} aria-current={page === n.key ? 'page' : undefined}>{n.label}</a></li>
+          ))}
+        </ul>
+      </nav>
+    </details>
+
+    <nav class="lang" aria-label={d.ui.langLabel}>
+      <ul>
+        {LANGS.map((l) => (
+          <li>
+            <a
+              href={href(l, langPage)}
+              lang={LOCALE[l]}
+              hreflang={LOCALE[l]}
+              data-lang={l}
+              aria-current={l === lang ? 'page' : undefined}
+            >{l.toUpperCase()}<span class="sr-only"> {t(l).langName}</span></a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  </div>
+</header>

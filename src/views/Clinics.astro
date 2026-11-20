@@ -1,0 +1,202 @@
+---
+import Base from '../layouts/Base.astro';
+import Station from '../components/Station.astro';
+import Elbow from '../components/Elbow.astro';
+import PhoneMock from '../components/PhoneMock.astro';
+import ContactForm from '../components/ContactForm.astro';
+import CopyEmail from '../components/CopyEmail.astro';
+import Arrow from '../components/Arrow.astro';
+import { t } from '../i18n';
+import type { Lang } from '../i18n/routes';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const d = t(lang);
+const c = d.clinics;
+const schema = [{ '@type': 'Service', name: c.hero.eyebrow, description: c.description, serviceType: 'AI assistant', audience: { '@type': 'Audience', audienceType: 'Aesthetic clinics' } }];
+---
+<Base lang={lang} page="clinics" title={c.title} description={c.description} schema={schema}>
+  <section class="lhero wrap" aria-labelledby="cl-title">
+    <div class="lhero-text">
+      <p class="tag"><b>04</b><span aria-hidden="true">/</span>{c.hero.eyebrow}</p>
+      <h1 id="cl-title">{c.hero.title}</h1>
+      <p class="lead">{c.hero.lead}</p>
+      <div class="lhero-cta">
+        <a class="btn btn-hero" href="#pedido">{c.hero.cta}<Arrow /></a>
+      </div>
+      <p class="note-dot">{c.hero.note}</p>
+    </div>
+
+    <figure class="cchat panel">
+      <figcaption class="cchat-head"><span class="tag"><b>IA</b>{c.chat.assistant}</span><span class="tag-example">{d.ui.example}</span></figcaption>
+      <p class="sr-only">{c.chat.caption}</p>
+      <div class="cchat-log">
+        <p class="cmsg is-me"><span class="sr-only">{c.chat.owner}: </span>{c.chat.q1}</p>
+        <div class="cmsg is-ai">
+          <span class="sr-only">{c.chat.assistant}: </span>
+          <p>{c.chat.a1}</p>
+          <ul>{c.chat.list.map(([n, x]) => <li><b>{n}</b> — {x}</li>)}</ul>
+          <div class="cdraft">
+            <p class="tag">{c.chat.draftLabel}</p>
+            <p>{c.chat.draft}</p>
+          </div>
+        </div>
+        <p class="cmsg is-me"><span class="sr-only">{c.chat.owner}: </span>{c.chat.q2}</p>
+      </div>
+      <p class="cchat-cap muted">{c.chat.caption}</p>
+    </figure>
+  </section>
+
+  <div class="line wrap">
+    <Station side="left" code="04.1" name={c.does.name} labelledby="cl-does" start>
+      <div class="station-head"><h2 id="cl-does">{c.does.title}</h2></div>
+      <ol class="items items-3">
+        {c.does.items.map(([h, p], i) => <li><span class="mono">{String(i + 1).padStart(2, '0')}</span><h3>{h}</h3><p>{p}</p></li>)}
+      </ol>
+    </Station>
+    <Elbow from="left" />
+
+    <Station side="right" code="04.2" name={c.returns.name} labelledby="cl-ret">
+      <div class="station-head">
+        <h2 id="cl-ret">{c.returns.title}</h2>
+        <p class="lead">{c.returns.text}</p>
+      </div>
+      <figure class="returns panel">
+        <div class="returns-head"><span class="tag">{c.returns.caption}</span><span class="tag-example">{d.ui.example}</span></div>
+        <table>
+          <caption class="sr-only">{c.returns.caption} ({d.ui.example})</caption>
+          <thead><tr>{c.returns.cols.map((h) => <th scope="col">{h}</th>)}</tr></thead>
+          <tbody>
+            {c.returns.rows.map((r) => (
+              <tr>
+                <th scope="row" data-label={c.returns.cols[0]}>{r[0]}</th>
+                <td data-label={c.returns.cols[1]}>{r[1]}</td>
+                <td data-label={c.returns.cols[2]}>{r[2]}</td>
+                <td data-label={c.returns.cols[3]}>{r[3]}</td>
+                <td data-label={c.returns.cols[4]}><span class:list={['badge', r[4] === 'ready' ? 'is-ready' : 'is-next']}>{r[4] === 'ready' ? c.returns.ready : c.returns.next}</span></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </figure>
+    </Station>
+    <Elbow from="right" />
+
+    <Station side="left" code="04.3" name={c.morning.name} labelledby="cl-morn">
+      <div class="st-grid">
+        <div class="st-text">
+          <h2 id="cl-morn">{c.morning.title}</h2>
+          <p class="lead">{c.morning.text}</p>
+        </div>
+        <figure class="morning">
+          <PhoneMock>
+            <div class="pm">
+              <div class="pm-status" aria-hidden="true"><span>08:00</span><span class="tag-example">{d.ui.example}</span></div>
+              <div class="pm-head"><span class="pm-av" aria-hidden="true">IA</span><span><b>{c.morning.sender}</b><small>{c.morning.senderSub}</small></span></div>
+              <div class="pm-msg">
+                <p class="sr-only">{c.morning.srIntro}</p>
+                <p class="pm-greet">{c.morning.greet}</p>
+                <dl>{c.morning.rows.map(([k, v]) => <div><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
+                <span class="pm-time" aria-hidden="true">08:00</span>
+              </div>
+            </div>
+          </PhoneMock>
+        </figure>
+      </div>
+    </Station>
+    <Elbow from="left" />
+
+    <Station side="right" code="04.4" name={c.how.name} labelledby="cl-how">
+      <div class="station-head"><h2 id="cl-how">{c.how.title}</h2></div>
+      <ol class="timeline">
+        {c.how.steps.map(([h, p], i) => <li><span class="mono">{String(i + 1).padStart(2, '0')}</span><h3>{h}</h3><p>{p}</p></li>)}
+      </ol>
+      <p class="timeline-done note-dot">{c.how.done}</p>
+    </Station>
+    <Elbow from="right" />
+
+    <Station side="left" code="04.5" name={c.pilot.name} labelledby="cl-pilot">
+      <div class="st-grid">
+        <div class="st-text">
+          <h2 id="cl-pilot">{c.pilot.title}</h2>
+          <p class="lead">{c.pilot.text}</p>
+          <p><a class="btn btn-hero" href="#pedido">{c.hero.cta}<Arrow /></a></p>
+        </div>
+        <ul class="pilot panel">
+          {c.pilot.items.map(([h, p]) => <li><h3>{h}</h3><p class="muted">{p}</p></li>)}
+        </ul>
+      </div>
+    </Station>
+    <Elbow from="left" />
+
+    <Station side="right" code="04.6" name={c.rgpd.name} labelledby="cl-rgpd">
+      <div class="station-head"><h2 id="cl-rgpd">{c.rgpd.title}</h2></div>
+      <ul class="items">
+        {c.rgpd.items.map(([h, p], i) => <li><span class="mono">{String(i + 1).padStart(2, '0')}</span><h3>{h}</h3><p>{p}</p></li>)}
+      </ul>
+    </Station>
+    <Elbow from="right" />
+
+    <Station side="left" code="04.7" name={c.form.name} labelledby="cl-form" end>
+      <div class="form-split">
+        <div class="st-text">
+          <h2 id="cl-form">{c.form.title}</h2>
+          <p class="lead">{c.form.text}</p>
+          <CopyEmail lang={lang} label={d.form.emailAlt} />
+        </div>
+        <ContactForm lang={lang} page="clinics" service="clinics" />
+      </div>
+    </Station>
+  </div>
+</Base>
+
+<style>
+  .cchat { padding: 18px; display: grid; gap: 14px; width: 100%; max-width: 480px; justify-self: end; }
+  .cchat-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-bottom: 12px; border-bottom: 1px dashed var(--line-strong); }
+  .cchat-log { display: grid; gap: 10px; }
+  .cmsg { max-width: 90%; padding: 11px 14px; border-radius: 14px; font-size: 0.95rem; }
+  .cmsg.is-me { justify-self: end; background: var(--ink); color: var(--bg); border-bottom-right-radius: 4px; }
+  .cmsg.is-ai { background: var(--surface-2); border-bottom-left-radius: 4px; display: grid; gap: 8px; }
+  .cmsg ul { margin: 0; padding-left: 1.1em; display: grid; gap: 3px; }
+  .cmsg b { font-weight: 500; }
+  .cdraft { margin-top: 4px; padding: 10px 12px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--hero); display: grid; gap: 6px; }
+  .cchat-cap { font-size: 0.85rem; }
+  @media (max-width: 899px) { .cchat { justify-self: stretch; max-width: none; } }
+
+  .returns { padding: 18px; overflow: hidden; }
+  .returns-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-bottom: 12px; }
+  .returns table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+  .returns th, .returns td { text-align: left; padding: 12px 10px; border-top: 1px solid var(--line); vertical-align: middle; }
+  .returns thead th { font-family: var(--f-mono); font-size: 0.72rem; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); border-top: 0; }
+  .returns tbody th { font-weight: 500; }
+  .badge { display: inline-block; padding: 4px 9px; border-radius: 6px; font-size: 0.8rem; font-weight: 500; white-space: nowrap; }
+  .badge.is-ready { background: var(--hero); color: var(--on-hero); }
+  .badge.is-next { border: 1px dashed var(--line-strong); color: var(--muted); }
+  @media (max-width: 720px) {
+    .returns thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+    .returns tr { display: grid; grid-template-columns: minmax(0, 1fr); padding: 12px 0; border-top: 1px solid var(--line); }
+    .returns th, .returns td { display: grid; grid-template-columns: 120px 1fr; gap: 10px; border: 0; padding: 4px 0; }
+    .returns th::before, .returns td::before { content: attr(data-label); font-family: var(--f-mono); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); padding-top: 3px; }
+    .returns td .badge { justify-self: start; }
+  }
+
+  .morning { justify-self: end; }
+  @media (max-width: 899px) { .morning { justify-self: center; } }
+  .pm { height: 100%; background: #eef1f4; color: #10182b; padding: 40px 12px 14px; display: flex; flex-direction: column; gap: 12px; font-size: 12.5px; }
+  .pm-status { display: flex; justify-content: space-between; align-items: center; font-family: var(--f-mono); font-size: 11px; padding: 0 6px; position: absolute; top: 10px; left: 18px; right: 18px; }
+  .pm-status .tag-example { background: #fff; color: #4a556b; font-size: 9px; padding: 1px 5px; }
+  .pm-head { display: flex; gap: 10px; align-items: center; padding: 8px 6px 10px; border-bottom: 1px solid #d5dbe3; }
+  .pm-head span:last-child { display: grid; line-height: 1.25; }
+  .pm-head small { color: #4a556b; font-size: 11px; }
+  .pm-av { width: 32px; height: 32px; border-radius: 10px; background: #ffc83d; color: #10182b; display: grid; place-items: center; font-family: var(--f-mono); font-weight: 500; font-size: 11px; }
+  .pm-msg { position: relative; background: #fff; border-radius: 14px; border-top-left-radius: 4px; padding: 12px 12px 22px; display: grid; gap: 8px; box-shadow: 0 1px 0 #d5dbe3; }
+  .pm-greet { font-weight: 500; }
+  .pm-msg dl { margin: 0; display: grid; gap: 7px; }
+  .pm-msg dt { font-family: var(--f-mono); font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; color: #4a556b; }
+  .pm-msg dd { margin: 0; }
+  .pm-time { position: absolute; right: 10px; bottom: 6px; font-family: var(--f-mono); font-size: 9.5px; color: #4a556b; }
+
+  .pilot { list-style: none; margin: 0; padding: 6px 22px; display: grid; }
+  .pilot li { padding: 16px 0; border-top: 1px solid var(--line); display: grid; gap: 4px; }
+  .pilot li:first-child { border-top: 0; }
+</style>

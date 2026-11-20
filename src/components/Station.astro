@@ -1,0 +1,41 @@
+---
+/**
+ * Uma "estação" do pipeline: troço vertical do cano, nó e rótulo técnico.
+ * O conteúdo vai no slot. `end` desenha a tampa no fim do cano.
+ */
+interface Props {
+  side: 'left' | 'right';
+  code?: string;
+  name?: string;
+  id?: string;
+  labelledby?: string;
+  end?: boolean;
+  start?: boolean;
+  class?: string;
+}
+const { side, code, name, id, labelledby, end, start, class: cls } = Astro.props;
+---
+<section class:list={['station', cls]} data-side={side} id={id} aria-labelledby={labelledby}>
+  <div class="run" aria-hidden="true">
+    <svg viewBox="0 0 3 100" preserveAspectRatio="none" focusable="false">
+      <path class="pipe-track" d="M1.5 0V100" />
+      <path class="pipe-fill" d="M1.5 0V100" pathLength="1" />
+    </svg>
+    <span class="cap-track"><span class="capsule"></span></span>
+  </div>
+  <span class="node" aria-hidden="true"></span>
+  {start && <span class="cap-start" aria-hidden="true"></span>}
+  {end && <span class="cap-end" aria-hidden="true"></span>}
+  {name && (
+    <p class="tag st-tag">{code && <b>{code}</b>}{code && <span aria-hidden="true">/</span>}{name}</p>
+  )}
+  <slot />
+</section>
+
+<style>
+  .st-tag { margin-bottom: 18px; }
+  .station[data-side='right'] > .st-tag { display: flex; justify-content: flex-end; }
+  @media (max-width: 899px) {
+    .station[data-side='right'] > .st-tag { justify-content: flex-start; }
+  }
+</style>

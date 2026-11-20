@@ -1,0 +1,37 @@
+---
+/**
+ * TODO: testemunhos reais. Só ligar (config.showTestimonials = true) quando houver
+ * clientes verdadeiros, com autorização escrita para publicar nome e frase.
+ * Nunca inventar testemunhos.
+ */
+import { t } from '../i18n';
+import type { Lang } from '../i18n/routes';
+import { config } from '../config';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const d = t(lang).home.testimonials;
+
+/** TODO: preencher com testemunhos reais, por idioma. */
+const items: Record<Lang, { quote: string; name: string; business: string }[]> = { pt: [], en: [], es: [] };
+const list = items[lang];
+const show = config.showTestimonials && list.length > 0;
+---
+{show && (
+  <div class="testimonials">
+    <h2 class="sr-only">{d.title}</h2>
+    {list.map((x) => (
+      <figure class="panel testimonial">
+        <blockquote><p>{x.quote}</p></blockquote>
+        <figcaption><b>{x.name}</b>, {x.business}</figcaption>
+      </figure>
+    ))}
+  </div>
+)}
+
+<style>
+  .testimonials { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+  .testimonial { padding: 24px; display: grid; gap: 16px; }
+  blockquote { margin: 0; font-size: 1.1rem; }
+  figcaption { color: var(--muted); font-size: 0.95rem; }
+</style>
