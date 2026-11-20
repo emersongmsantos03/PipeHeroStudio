@@ -1,7 +1,8 @@
 ---
 /**
  * Formulário de contacto.
- * Envia para config.formWebhook (n8n). Se estiver vazio, usa o Netlify Forms.
+ * Envia para config.formWebhook (n8n). Se estiver vazio, usa /api/contact
+ * (Worker da Cloudflare em worker/index.ts, que envia o pedido por e-mail).
  */
 import { t, fill } from '../i18n';
 import { href, type Lang, type PageKey } from '../i18n/routes';
@@ -12,7 +13,7 @@ interface Props { lang: Lang; page: PageKey; service?: Service; id?: string }
 const { lang, page, service, id = 'pedido' } = Astro.props;
 const d = t(lang);
 const f = d.form;
-const netlify = !config.formWebhook;
+const endpoint = config.formWebhook || '/api/contact';
 const types = Object.fromEntries(Object.entries(d.minisite.types).map(([k, v]) => [k, v.label]));
 const msgs = {
   ...f.errors,
@@ -36,16 +37,12 @@ const services = Object.entries(f.services) as [Service, string][];
     id={id}
     name="contacto"
     method="POST"
-    action={netlify ? href(lang, 'contact') + '?enviado=1' : config.formWebhook}
+    action={endpoint}
     data-form
-    data-endpoint={netlify ? '/' : config.formWebhook}
-    data-netlify-mode={netlify ? '1' : '0'}
+    data-endpoint={endpoint}
     data-i18n={JSON.stringify(msgs)}
-    data-netlify={netlify ? 'true' : undefined}
-    netlify-honeypot={netlify ? 'bot-field' : undefined}
     novalidate
   >
-    {netlify && <input type="hidden" name="form-name" value="contacto" />}
     <input type="hidden" name="idioma" value={lang} />
     <input type="hidden" name="pagina" value={page} />
     <input type="hidden" name="tipo" value="" />

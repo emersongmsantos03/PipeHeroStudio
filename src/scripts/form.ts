@@ -1,4 +1,4 @@
-/* Formulário: pré-preenchimento, validação e envio (webhook n8n ou Netlify Forms). */
+/* Formulário: pré-preenchimento, validação e envio (webhook n8n ou /api/contact na Cloudflare). */
 
 type Msgs = {
   required: string; email: string; phone: string; privacy: string; fix: string;
@@ -17,8 +17,18 @@ function init(form: HTMLFormElement) {
   const success = root.querySelector<HTMLElement>('[data-success]')!;
   const el = (n: string) => form.elements.namedItem(n) as HTMLInputElement;
 
-  // Pré-preenchimento vindo do hero: ?nome=…&tipo=…
   const q = new URLSearchParams(location.search);
+
+  // Regresso de um envio sem JavaScript (o Worker redireciona com ?enviado=1 / ?sent=1).
+  if (q.get('enviado') === '1' || q.get('sent') === '1') {
+    success.querySelector('[data-success-title]')!.textContent = m.successTitle.replace(/,?\s*\{name\}/, '');
+    success.querySelector('[data-success-text]')!.textContent = m.successText;
+    form.hidden = true;
+    success.hidden = false;
+    return;
+  }
+
+  // Pré-preenchimento vindo do hero: ?nome=…&tipo=…
   const nome = (q.get('nome') || '').slice(0, 80).trim();
   const tipo = q.get('tipo') || '';
   const tipoLabel = m.types[tipo];
@@ -77,7 +87,6 @@ function init(form: HTMLFormElement) {
       (first as HTMLInputElement).focus();
       return;
     }
-    const netlify = form.dataset.netlifyMode === '1';
     const data = new URLSearchParams();
     new FormData(form).forEach((v, k) => data.append(k, String(v).trim()));
     const name = el('nome').value.trim().split(/\s+/)[0];
@@ -92,10 +101,6 @@ function init(form: HTMLFormElement) {
 
     // Honeypot preenchido: fingimos sucesso e não enviamos nada.
     if (data.get('bot-field')) return done();
-    if (netlify && isLocal) {
-      status.textContent = m.localOnly;
-      return;
-    }
 
     const label = submit.innerHTML;
     submit.disabled = true;
@@ -103,9 +108,16 @@ function init(form: HTMLFormElement) {
     try {
       const res = await fetch(form.dataset.endpoint || '/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
         body: data.toString(),
       });
+      // Em `npm run dev` (só Astro) não existe /api/contact: avisa em vez de dar erro.
+      if (res.status === 404 && isLocal) {
+        status.textContent = m.localOnly;
+        submit.disabled = false;
+        submit.innerHTML = label;
+        return;
+      }
       if (!res.ok) throw new Error('HTTP ' + res.status);
       done();
     } catch {

@@ -28,7 +28,7 @@ for (const f of files) {
   const html = readFileSync(f, 'utf8');
   for (const m of html.matchAll(/\s(?:href|src|action)="([^"]+)"/g)) {
     const url = m[1];
-    if (/^(https?:|mailto:|tel:|data:)/.test(url)) continue;
+    if (/^(https?:|mailto:|tel:|data:)/.test(url) || url.startsWith('/api/')) continue; // /api/* é o Worker
     checked++;
     if (url.startsWith('#')) {
       if (url.length > 1 && !ids.get(f).has(url.slice(1))) { console.log(`✗ ${f}: âncora ${url} não existe`); errors++; }

@@ -1,0 +1,32 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "pipeherostudio",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-11-20",
+
+  // O site estático (Astro) sai de dist/. O Worker só corre em /api/*.
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page",
+    "run_worker_first": ["/api/*"]
+  },
+
+  // Envio do formulário por e-mail (Cloudflare Email Service).
+  // Só permite enviar a partir deste remetente, que tem de pertencer ao domínio configurado no Email Sending.
+  "send_email": [
+    {
+      "name": "EMAIL",
+      "allowed_sender_addresses": ["site@pipeherostudio.digital"]
+    }
+  ],
+
+  // CONTACT_TO (opcional) pode ser definido no painel: Settings → Variables. Não é apagado nos deploys.
+  "keep_vars": true,
+
+  "observability": { "enabled": true }
+
+  // TODO: depois de o domínio estar ativo na Cloudflare, descomente para ligar o domínio ao Worker:
+  // ,"routes": [{ "pattern": "pipeherostudio.digital", "custom_domain": true }]
+}

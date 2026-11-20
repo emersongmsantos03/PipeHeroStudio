@@ -9,13 +9,12 @@ Precisa de Node.js 22 (22.22 ou mais recente).
 
 ```bash
 npm install
-npm run dev          # http://localhost:4321 com recarregamento automático
+npm run dev          # http://localhost:4321, só o site (o formulário não envia)
+npm run preview      # build + Worker local em http://localhost:8787, com /api/contact (e-mail simulado)
 npm run build        # gera o site final em dist/
-npm run preview      # serve dist/ para ver o resultado final
 npm run check:links  # depois do build: verifica links internos e o seletor de idioma
+npm run types        # regenera os tipos do Worker depois de mudar o wrangler.jsonc
 ```
-
-O formulário só envia com o site publicado (no computador mostra um aviso).
 
 ## Onde editar
 
@@ -35,8 +34,9 @@ O formulário só envia com o site publicado (no computador mostra um aviso).
 
 - `email`: o único e-mail do site.
 - `whatsapp`: só dígitos com indicativo (ex. `351912345678`). Vazio esconde todos os botões de WhatsApp.
-- `formWebhook`: URL do webhook do n8n. Vazio usa o Netlify Forms.
-  - No n8n, o nó Webhook deve aceitar `POST` e permitir a origem `https://pipeherostudio.digital` (CORS).
+- `formWebhook`: URL do webhook do n8n (opcional).
+  - Vazio: o formulário envia para `/api/contact` (`worker/index.ts`), que manda o pedido por e-mail para `emerson@pipeherostudio.digital`, com Reply-To de quem preencheu.
+  - Com URL: o nó Webhook do n8n deve aceitar `POST` e permitir a origem `https://pipeherostudio.digital` (CORS).
   - Os campos chegam como formulário: `nome`, `negocio`, `pais`, `email`, `telefone`, `servico`, `mensagem`, `privacidade`, `tipo`, `idioma`, `pagina`.
 - `chatWebhook` + `chatEnabled`: liga o chat de IA no canto do ecrã.
   - O webhook recebe JSON `{ sessionId, message, lang, page }`.
@@ -45,30 +45,49 @@ O formulário só envia com o site publicado (no computador mostra um aviso).
 - `maintenanceFrom`, `crmFrom`, `agentsFrom`: `null` mostra "Sob consulta". Com um valor, mostra "A partir de …".
 - `legal`: nome legal, NIF e morada para a privacidade e os termos.
 
-## Publicar (GitHub → Netlify)
+## Publicar na Cloudflare (Workers + GitHub)
 
-1. Faça push para o GitHub (`main`).
-2. Ligue o repositório ao Netlify:
-   - Em Netlify → **Add new site** → **Import an existing project** → **GitHub**, escolha `PipeHeroStudio`.
-   - O `netlify.toml` já define o comando (`npm run build`), a pasta (`dist`) e o Node 22. Clique em **Deploy**.
-3. A partir daí, cada `git push` para `main` publica automaticamente.
+O site é um Worker da Cloudflare com ficheiros estáticos. A configuração está em `wrangler.jsonc`: os ficheiros vêm de `dist/` e o Worker só corre em `/api/*`.
 
-### Formulário (Netlify Forms, enquanto não houver webhook)
+### 1. Domínio na Cloudflare
 
-1. **Site configuration → Forms**: ative a deteção de formulários e faça um novo deploy (**Deploys → Trigger deploy**).
-2. **Forms → Form notifications → Add notification → Email notification**, para `emerson@pipeherostudio.digital`.
-3. Faça um envio de teste no site publicado.
+1. Em dash.cloudflare.com → **Add a domain**, escreva `pipeherostudio.digital` e escolha o plano Free.
+2. No registador onde comprou o domínio, troque os nameservers pelos 2 que a Cloudflare indicar.
+3. Espere até o domínio aparecer como **Active**.
 
-### Domínio pipeherostudio.digital
+### 2. Receber e-mail em emerson@pipeherostudio.digital
 
-Em **Domain management → Add a domain**, escreva `pipeherostudio.digital` e escolha uma de duas opções:
+1. **Email → Email Routing**: ative-o para o domínio. Crie a regra `emerson@pipeherostudio.digital` → a sua caixa pessoal.
+2. Confirme a caixa pessoal no link que a Cloudflare envia.
 
-- **Recomendado: DNS da Netlify.** Siga o assistente e troque os nameservers no registador do domínio pelos 4 que a Netlify indicar.
-- **DNS no registador.** Crie estes registos (confirme os valores no painel da Netlify):
-  - `A`, nome `@`: `75.2.60.5`
-  - `CNAME`, nome `www`: `<nome-do-site>.netlify.app`
+### 3. Enviar o formulário por e-mail
 
-O certificado HTTPS (Let's Encrypt) é criado automaticamente quando o DNS propagar.
+1. Vá a **Compute → Email Service → Email Sending → Onboard Domain** e escolha `pipeherostudio.digital`. Os registos DNS são criados automaticamente.
+2. O remetente dos e-mails é `site@pipeherostudio.digital`. Não precisa de existir como caixa.
+3. Plano necessário:
+   - **Plano Free:** o envio só funciona para endereços de destino verificados. Em **Settings → Variables and Secrets**, crie a variável `CONTACT_TO` com a sua caixa pessoal verificada; ela não é apagada nos deploys (`keep_vars`).
+   - **Workers Paid:** envia para qualquer endereço, com 3 000 e-mails por mês incluídos. Confirme o preço atual no painel.
+
+### 4. Ligar o GitHub (deploy automático)
+
+1. Abra **Workers & Pages → Create → Import a repository → GitHub** e escolha `PipeHeroStudio`.
+2. Configure assim:
+   - Nome do Worker: `pipeherostudio` (tem de ser igual ao `name` do `wrangler.jsonc`)
+   - Build command: `npm run build`
+   - Deploy command: `npx wrangler deploy`
+   - Branch: `main`
+3. A partir daí, cada `git push` para `main` publica sozinho.
+
+### 5. Apontar o domínio para o Worker
+
+1. Descomente o bloco `routes` no fim do `wrangler.jsonc`, faça commit e push. Em alternativa, use **Worker → Settings → Domains & Routes → Add → Custom domain**.
+2. Para `www`, crie em **Rules → Redirect Rules** um redirecionamento 301 de `www.pipeherostudio.digital/*` para `https://pipeherostudio.digital/${1}`. O `www` precisa de um registo DNS com proxy ativo, por exemplo `A www 192.0.2.1` com a nuvem laranja.
+
+### Notas
+
+- Páginas 404 por idioma: `scripts/postbuild.mjs` cria `pt/404.html`, `en/404.html` e `es/404.html`. A Cloudflare serve a mais próxima.
+- Cabeçalhos de segurança e cache: `public/_headers`.
+- Logs do Worker: `npx wrangler tail pipeherostudio`.
 
 ## Estrutura
 
@@ -81,6 +100,8 @@ src/
   views/                 uma vista por página
   scripts/               JavaScript das ilhas (gancho do hero, formulário, conversa de exemplo)
   pages/                 rotas: /[lang]/[...slug], raiz, 404, sitemap.xml, imagens OG
+worker/index.ts          Worker da Cloudflare: /api/contact (formulário → e-mail)
+wrangler.jsonc           configuração da Cloudflare
 public/                  fontes (subconjunto latino), favicon, robots.txt
 ```
 

@@ -1,6 +1,6 @@
 /**
  * Tudo o que é variável no site está aqui.
- * Depois de alterar, faça commit e push: o Netlify publica sozinho.
+ * Depois de alterar, faça commit e push: a Cloudflare (Workers Builds) publica sozinha.
  */
 
 /** Preço por moeda. `null` mostra "Sob consulta" / "On request" / "Bajo consulta". */
@@ -20,7 +20,7 @@ export const config = {
   /** Utilizador do Instagram, sem @. */
   instagram: 'pipehero.studio',
 
-  /** TODO: URL do webhook do n8n para o formulário. Vazio = usa o Netlify Forms. */
+  /** TODO (opcional): URL do webhook do n8n. Vazio = /api/contact (Worker da Cloudflare que envia e-mail). */
   formWebhook: '',
 
   /** TODO: URL do webhook do n8n para o chat de IA. */
