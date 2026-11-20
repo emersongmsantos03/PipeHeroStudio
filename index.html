@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pipe Hero Studio</title>
+  <meta name="description" content="AI management assistant for aesthetic clinics. Assistente de gestão com IA para clínicas de estética. Asistente de gestión con IA para clínicas de estética.">
+  <link rel="alternate" hreflang="pt-PT" href="https://seu-dominio.pt/pt/">
+  <link rel="alternate" hreflang="en-GB" href="https://seu-dominio.pt/en/">
+  <link rel="alternate" hreflang="es-ES" href="https://seu-dominio.pt/es/">
+  <link rel="alternate" hreflang="x-default" href="https://seu-dominio.pt/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Pipe Hero Studio">
+  <meta property="og:title" content="Pipe Hero Studio">
+  <meta property="og:description" content="AI management assistant for aesthetic clinics.">
+  <meta property="og:url" content="https://seu-dominio.pt/">
+  <meta property="og:image" content="https://seu-dominio.pt/assets/og-en.png">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700&family=Instrument+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/styles.css">
+  <script>
+    (function () {
+      var supported = ["pt", "en", "es"];
+      var pick = null;
+      try { pick = localStorage.getItem("phs-lang"); } catch (e) {}
+      if (supported.indexOf(pick) === -1) {
+        pick = null;
+        var langs = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || ""];
+        for (var i = 0; i < langs.length && !pick; i++) {
+          var code = String(langs[i]).slice(0, 2).toLowerCase();
+          if (supported.indexOf(code) !== -1) pick = code;
+        }
+      }
+      pick = pick || "en";
+      var target = pick + "/" + (location.protocol === "file:" ? "index.html" : "");
+      location.replace(target);
+    })();
+  </script>
+</head>
+<body>
+  <main class="chooser">
+    <div>
+      <svg class="brand-mark" viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="11" fill="#306CFF"/><path d="M14 32 35 16" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/><circle cx="14" cy="32" r="3.6" fill="#fff"/><circle cx="24.5" cy="24" r="3.4" fill="#fff"/><circle cx="35" cy="16" r="4.2" fill="#FFAE22"/></svg>
+      <h1>Pipe Hero Studio</h1>
+      <p>Escolha o idioma · Choose your language · Elija su idioma</p>
+      <div class="chooser-links">
+        <a class="btn btn-ghost" href="pt/index.html" lang="pt-PT" hreflang="pt-PT">Português</a>
+        <a class="btn btn-ghost" href="en/index.html" lang="en-GB" hreflang="en-GB">English</a>
+        <a class="btn btn-ghost" href="es/index.html" lang="es-ES" hreflang="es-ES">Español</a>
+      </div>
+    </div>
+  </main>
+</body>
+</html>
