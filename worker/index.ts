@@ -5,6 +5,7 @@
  * - tudo o resto: ficheiros estáticos do Astro (dist/).
  */
 import { handleChat, type ChatEnv } from './chat';
+import { notifyWhatsApp } from './notify';
 
 interface Env extends ChatEnv {
   ASSETS: Fetcher;
@@ -97,6 +98,11 @@ async function handleContact(request: Request, env: Env): Promise<Response> {
     .map(([k, v]) => `<tr><td style="color:#4a556b">${esc(k)}</td><td><strong>${esc(v)}</strong></td></tr>`)
     .join('')}</table><p style="font-family:system-ui,sans-serif;font-size:14px;white-space:pre-wrap">${esc(data.mensagem)}</p>`;
 
+  const whatsapp = notifyWhatsApp(
+    env,
+    `Novo pedido do site (${data.servico})\n${data.nome} — ${data.negocio} (${data.pais})\n${data.email}${data.telefone ? ' · ' + data.telefone : ''}\n\n${data.mensagem}`,
+  );
+  let emailed = false;
   try {
     await env.EMAIL.send({
       to: env.CONTACT_TO || DEFAULT_TO,
@@ -106,11 +112,12 @@ async function handleContact(request: Request, env: Env): Promise<Response> {
       text,
       html,
     });
+    emailed = true;
   } catch (e) {
     const err = e as { code?: string; message?: string };
     console.error('contact: send failed', err.code, err.message);
-    return fail(502, 'send_failed');
   }
+  if (!(await whatsapp) && !emailed) return fail(502, 'send_failed');
   return done();
 }
 

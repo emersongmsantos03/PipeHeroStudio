@@ -62,8 +62,9 @@ O site é um Worker da Cloudflare com ficheiros estáticos. A configuração est
 
 ### 2. Receber e-mail em emerson@pipeherostudio.digital
 
-1. **Email → Email Routing**: ative-o para o domínio. Crie a regra `emerson@pipeherostudio.digital` → a sua caixa pessoal.
-2. Confirme a caixa pessoal no link que a Cloudflare envia.
+A caixa está no **Zoho** (registos MX do domínio). **Não ative o Email Routing** na raiz do domínio: isso troca os MX e o Zoho deixa de receber.
+
+Para o site poder enviar para esta caixa no plano Free, ela tem de ser um **endereço de destino verificado** na conta Cloudflare (já criado: `npx wrangler email routing addresses create emerson@pipeherostudio.digital`). Abra o e-mail da Cloudflare no Zoho e clique em **Verify email address**. Sem isso, o envio falha com `E_RECIPIENT_NOT_ALLOWED`.
 
 ### 3. Enviar o formulário por e-mail
 
@@ -72,6 +73,16 @@ O site é um Worker da Cloudflare com ficheiros estáticos. A configuração est
 3. Plano necessário:
    - **Plano Free:** o envio só funciona para endereços de destino verificados. Em **Settings → Variables and Secrets**, crie a variável `CONTACT_TO` com a sua caixa pessoal verificada; ela não é apagada nos deploys (`keep_vars`).
    - **Workers Paid:** envia para qualquer endereço, com 3 000 e-mails por mês incluídos. Confirme o preço atual no painel.
+
+### 3b. Aviso por WhatsApp (opcional)
+
+Os leads do chat e os pedidos do formulário também podem chegar ao seu WhatsApp, através do CallMeBot (gratuito, para uso pessoal):
+
+1. Siga as instruções em https://www.callmebot.com/blog/free-api-whatsapp-messages/ para receber a sua apikey no WhatsApp.
+2. `npx wrangler secret put CALLMEBOT_APIKEY` (cole a apikey).
+3. No painel, em **Settings → Variables**, crie `WHATSAPP_PHONE` com o seu número, só dígitos e com indicativo (ex. `351912345678`).
+
+Sem estas duas variáveis, o aviso por WhatsApp fica desligado. Os leads do chat ficam sempre guardados no KV `LEADS`, mesmo que o e-mail e o WhatsApp falhem.
 
 ### 4. Ligar o GitHub (deploy automático)
 

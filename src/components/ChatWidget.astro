@@ -10,37 +10,37 @@ interface Props { lang: Lang }
 const { lang } = Astro.props;
 const S = {
   pt: {
-    launch: 'Fale connosco', title: 'Assistente Pipe Hero', sub: 'IA · responde em PT, EN e ES',
-    greeting: 'Olá! Sou o assistente de IA da Pipe Hero Studio. Posso tirar dúvidas sobre sites, chat, CRM e agentes de IA, ou ajudar a perceber por onde começar. Em que posso ajudar?',
+    launch: 'Fale com a Ava', title: 'Ava', sub: 'Assistente virtual · Pipe Hero Studio',
+    greeting: 'Olá! Sou a Ava, a assistente virtual da Pipe Hero Studio. Posso tirar dúvidas sobre sites, chat, CRM e agentes de IA, ou ajudar a perceber por onde começar. Em que posso ajudar?',
     chips: ['Quero um site para o meu negócio', 'Quanto custa?', 'Como funciona o "só paga se gostar"?', 'Quero falar com o Emerson'],
     ph: 'Escreva a sua mensagem…', send: 'Enviar', close: 'Fechar o chat', reset: 'Nova conversa',
-    note: 'Assistente de IA: pode cometer erros.', privacy: 'Privacidade',
+    note: 'A Ava é uma assistente virtual com IA e pode cometer erros.', privacy: 'Privacidade',
     err: 'Não consegui responder agora. Tente de novo ou escreva para {email}.',
     rate: 'Muitas mensagens seguidas. Espere um minuto e tente de novo.',
     long: 'A conversa ficou longa. Para continuar, escreva para {email} ou comece uma nova conversa.',
-    sent: 'Resumo enviado ao Emerson', teaser: 'Tem dúvidas? Pergunte-me, respondo na hora.', dismiss: 'Fechar',
+    sent: 'Resumo enviado ao Emerson', teaser: 'Olá, sou a Ava! Tem dúvidas? Respondo na hora.', dismiss: 'Fechar',
   },
   en: {
-    launch: 'Chat with us', title: 'Pipe Hero assistant', sub: 'AI · replies in EN, PT and ES',
-    greeting: "Hi! I'm Pipe Hero Studio's AI assistant. I can answer questions about websites, chat, CRM and AI agents, or help you figure out where to start. How can I help?",
+    launch: 'Chat with Ava', title: 'Ava', sub: 'Virtual assistant · Pipe Hero Studio',
+    greeting: "Hi! I'm Ava, Pipe Hero Studio's virtual assistant. I can answer questions about websites, chat, CRM and AI agents, or help you figure out where to start. How can I help?",
     chips: ['I need a website for my business', 'How much does it cost?', 'How does "pay only if you like it" work?', 'I want to talk to Emerson'],
     ph: 'Type your message…', send: 'Send', close: 'Close chat', reset: 'New conversation',
-    note: 'AI assistant: it can make mistakes.', privacy: 'Privacy',
+    note: 'Ava is an AI virtual assistant and can make mistakes.', privacy: 'Privacy',
     err: "I couldn't reply right now. Please try again or email {email}.",
     rate: 'Too many messages in a row. Please wait a minute and try again.',
     long: 'This conversation got long. To continue, email {email} or start a new conversation.',
-    sent: 'Summary sent to Emerson', teaser: 'Questions? Ask me, I reply instantly.', dismiss: 'Dismiss',
+    sent: 'Summary sent to Emerson', teaser: "Hi, I'm Ava! Questions? I reply instantly.", dismiss: 'Dismiss',
   },
   es: {
-    launch: 'Habla con nosotros', title: 'Asistente Pipe Hero', sub: 'IA · responde en ES, EN y PT',
-    greeting: '¡Hola! Soy el asistente de IA de Pipe Hero Studio. Puedo resolver dudas sobre webs, chat, CRM y agentes de IA, o ayudarte a ver por dónde empezar. ¿En qué te ayudo?',
+    launch: 'Habla con Ava', title: 'Ava', sub: 'Asistente virtual · Pipe Hero Studio',
+    greeting: '¡Hola! Soy Ava, la asistente virtual de Pipe Hero Studio. Puedo resolver dudas sobre webs, chat, CRM y agentes de IA, o ayudarte a ver por dónde empezar. ¿En qué te ayudo?',
     chips: ['Quiero una web para mi negocio', '¿Cuánto cuesta?', '¿Cómo funciona el "solo pagas si te gusta"?', 'Quiero hablar con Emerson'],
     ph: 'Escribe tu mensaje…', send: 'Enviar', close: 'Cerrar el chat', reset: 'Nueva conversación',
-    note: 'Asistente de IA: puede equivocarse.', privacy: 'Privacidad',
+    note: 'Ava es una asistente virtual con IA y puede equivocarse.', privacy: 'Privacidad',
     err: 'No he podido responder ahora. Inténtalo de nuevo o escribe a {email}.',
     rate: 'Demasiados mensajes seguidos. Espera un minuto y vuelve a intentarlo.',
     long: 'La conversación se ha alargado. Para seguir, escribe a {email} o empieza una nueva conversación.',
-    sent: 'Resumen enviado a Emerson', teaser: '¿Dudas? Pregúntame, respondo al momento.', dismiss: 'Cerrar',
+    sent: 'Resumen enviado a Emerson', teaser: '¡Hola, soy Ava! ¿Dudas? Respondo al momento.', dismiss: 'Cerrar',
   },
 }[lang];
 const data = { ...S, email: config.email, lang };
@@ -53,7 +53,7 @@ const data = { ...S, email: config.email, lang };
 
   <button type="button" class="cb-launch" data-chat-launch aria-expanded="false" aria-controls="cb-panel">
     <span class="cb-launch-ico" aria-hidden="true">
-      <svg class="i-chat" viewBox="0 0 24 24"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4h0A1.5 1.5 0 0 1 4 14.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" /><circle cx="9" cy="10.2" r="1.1" fill="currentColor" /><circle cx="12" cy="10.2" r="1.1" fill="currentColor" /><circle cx="15" cy="10.2" r="1.1" fill="currentColor" /></svg>
+      <img class="i-chat" src="/ava.svg" alt="" width="42" height="42" decoding="async" />
       <svg class="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" /></svg>
     </span>
     <span class="cb-launch-txt">{S.launch}</span>
@@ -62,12 +62,13 @@ const data = { ...S, email: config.email, lang };
 
   <section class="cb-panel" id="cb-panel" role="dialog" aria-modal="false" aria-labelledby="cb-title" hidden data-chat-panel>
     <header class="cb-head">
-      <span class="cb-av" aria-hidden="true">
-        <svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.9L18.7 9.7l-4.9 1.8L12 16.4l-1.8-4.9L5.3 9.7l4.9-1.8z" fill="currentColor" /><path d="M18.5 15.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z" fill="currentColor" /></svg>
+      <span class="cb-av">
+        <img src="/ava.svg" alt="" width="44" height="44" decoding="async" />
+        <i aria-hidden="true"></i>
       </span>
       <span class="cb-id">
         <b id="cb-title">{S.title}</b>
-        <small><i aria-hidden="true"></i>{S.sub}</small>
+        <small>{S.sub}</small>
       </span>
       <button type="button" class="cb-icon" data-chat-reset aria-label={S.reset} title={S.reset}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4.5h4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
@@ -133,6 +134,7 @@ const data = { ...S, email: config.email, lang };
   .cb-launch:hover { transform: translateY(-2px); }
   .cb-launch-ico { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; background: var(--hero); color: var(--on-hero); }
   .cb-launch-ico svg { width: 22px; height: 22px; }
+  .cb-launch-ico img { width: 42px; height: 42px; border-radius: 50%; display: block; }
   .cb-launch .i-close { display: none; }
   .cb-launch[aria-expanded='true'] .i-chat { display: none; }
   .cb-launch[aria-expanded='true'] .i-close { display: block; }
@@ -162,8 +164,9 @@ const data = { ...S, email: config.email, lang };
   @keyframes cb-up { from { transform: translateY(8px); } }
 
   .cb-head { display: flex; align-items: center; gap: 10px; padding: 14px 10px 14px 16px; background: var(--ink); color: var(--bg); }
-  .cb-av { width: 40px; height: 40px; border-radius: 12px; flex: none; display: grid; place-items: center; background: var(--hero); color: var(--on-hero); }
-  .cb-av svg { width: 22px; height: 22px; }
+  .cb-av { position: relative; width: 44px; height: 44px; flex: none; }
+  .cb-av img { width: 44px; height: 44px; border-radius: 50%; display: block; box-shadow: 0 0 0 2px rgb(255 255 255 / 0.18); }
+  .cb-av i { position: absolute; right: 0; bottom: 1px; width: 11px; height: 11px; border-radius: 50%; background: #22c55e; border: 2px solid var(--ink); }
   .cb-id { display: grid; line-height: 1.3; margin-right: auto; min-width: 0; }
   .cb-id b { font-weight: 500; }
   .cb-id small { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; opacity: 0.8; }

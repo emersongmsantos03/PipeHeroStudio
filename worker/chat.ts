@@ -7,8 +7,9 @@
  */
 import en from '../src/i18n/en';
 import { config } from '../src/config';
+import { notifyWhatsApp, type NotifyEnv } from './notify';
 
-export interface ChatEnv {
+export interface ChatEnv extends NotifyEnv {
   OPENAI_API_KEY: string;
   OPENAI_MODEL?: string;
   EMAIL: SendEmail;
@@ -24,7 +25,7 @@ const MAX_MESSAGES = 40;
 const MAX_CHARS = 1200;
 const MARK_LEAD = '[[PHS:LEAD_SENT]]';
 const MARK_ERR = '[[PHS:ERROR]]';
-const FROM = { email: 'site@pipeherostudio.digital', name: 'Assistente Pipe Hero' };
+const FROM = { email: 'site@pipeherostudio.digital', name: 'Ava · Pipe Hero Studio' };
 
 /* ---------- Conhecimento: gerado a partir dos textos do site ---------- */
 const strip = (s: string) => s.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
@@ -51,7 +52,7 @@ const KNOWLEDGE = [
   `Monthly website maintenance, CRM automation and AI agents: price on request. Never quote numbers for them.`,
 ].join('\n');
 
-const SYSTEM = `You are the AI assistant on the Pipe Hero Studio website. You are friendly, warm, clear and genuinely helpful, like a great studio assistant. You are an AI and never pretend to be human; if asked, say so plainly.
+const SYSTEM = `You are Ava, the virtual assistant on the Pipe Hero Studio website. Introduce yourself as Ava ("Ava, a assistente virtual da Pipe Hero Studio" in Portuguese; "Ava, la asistente virtual de Pipe Hero Studio" in Spanish) and use feminine grammatical forms for yourself in Portuguese and Spanish. You are friendly, warm, clear and genuinely helpful, like a great studio assistant. You are an AI and never pretend to be human; if asked, say so plainly.
 
 LANGUAGE
 - Always reply in the language of the visitor's most recent message (English, Portuguese or Spanish; mirror Brazilian vs European Portuguese and their formality). If unsure, use the page language given below.
@@ -144,15 +145,21 @@ async function deliverLead(env: ChatEnv, lead: Lead, history: Msg[], meta: { ses
     ['Orçamento', lead.budget || '—'], ['Decisor', lead.decision_maker || '—'], ['Próximo passo', lead.next_step || '—'],
     ['Página', meta.page || '—'],
   ];
-  const transcript = history.map((m) => `${m.role === 'user' ? 'Visitante' : 'Assistente'}: ${m.content}`).join('\n\n');
+  const transcript = history.map((m) => `${m.role === 'user' ? 'Visitante' : 'Ava'}: ${m.content}`).join('\n\n');
   const text = `${lead.summary}\n\n${rows.map(([k, v]) => `${k}: ${v}`).join('\n')}\n\n--- Conversa ---\n${transcript}\n`;
   const html =
     `<div style="font-family:system-ui,sans-serif;font-size:14px;color:#10182b">` +
     `<p style="font-size:15px"><strong>${esc(lead.summary)}</strong></p>` +
     `<table cellpadding="6" style="border-collapse:collapse">${rows.map(([k, v]) => `<tr><td style="color:#4a556b;vertical-align:top">${esc(k)}</td><td>${esc(v)}</td></tr>`).join('')}</table>` +
     `<h3 style="margin-top:24px">Conversa</h3>` +
-    history.map((m) => `<p><strong>${m.role === 'user' ? 'Visitante' : 'Assistente'}:</strong> ${esc(m.content).replace(/\n/g, '<br>')}</p>`).join('') +
+    history.map((m) => `<p><strong>${m.role === 'user' ? 'Visitante' : 'Ava'}:</strong> ${esc(m.content).replace(/\n/g, '<br>')}</p>`).join('') +
     `</div>`;
+
+  const wa =
+    `${lead.is_update ? 'Atualização' : 'Novo lead'} (${lead.qualification.toUpperCase()}) do chat\n` +
+    `${lead.name}${lead.business ? ' — ' + lead.business : ''}\n` +
+    `${[email, phone].filter(Boolean).join(' · ')}\n\n${lead.summary}\n\nPróximo passo: ${lead.next_step || '—'}`;
+  const whatsapp = notifyWhatsApp(env, wa);
 
   let emailed = false;
   try {
@@ -169,7 +176,9 @@ async function deliverLead(env: ChatEnv, lead: Lead, history: Msg[], meta: { ses
     const err = e as { code?: string; message?: string };
     console.error('chat: email failed (lead saved in KV)', err.code, err.message);
   }
-  return { ok: true, saved: true, emailed };
+  const whatsapped = await whatsapp;
+  if (!emailed && !whatsapped) console.error('chat: lead NOT delivered (only in KV)', `lead:${when}:${meta.sessionId}`);
+  return { ok: true, saved: true, emailed, whatsapp: whatsapped };
 }
 
 /* ---------- OpenAI (streaming) ---------- */
@@ -240,7 +249,7 @@ export async function handleChat(request: Request, env: ChatEnv, ctx: ExecutionC
             reasoning_effort: 'none',
             max_completion_tokens: 600,
             stream: true,
-            prompt_cache_key: 'phs-chat-v1',
+            prompt_cache_key: 'phs-chat-v2',
             safety_identifier: meta.sessionId,
           }),
         });
