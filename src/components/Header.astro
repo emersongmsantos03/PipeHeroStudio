@@ -41,9 +41,10 @@ const cur = LANG_INFO[lang];
     </nav>
 
     <details class="hdr-pop langs" data-pop>
-      <summary aria-label={`${d.ui.langLabel}: ${cur.name}`}>
+      <summary>
         <span class="flags">{cur.flags.map((f) => <Flag code={f} />)}</span>
         <span class="lang-code">{lang.toUpperCase()}</span>
+        <span class="sr-only">— {d.ui.langLabel}: {cur.name}</span>
         <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" /></svg>
       </summary>
       <nav class="pop-panel langs-panel" aria-label={d.ui.langLabel}>

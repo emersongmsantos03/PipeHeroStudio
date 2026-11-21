@@ -23,11 +23,11 @@ export const config = {
   /** TODO (opcional): URL do webhook do n8n. Vazio = /api/contact (Worker da Cloudflare que envia e-mail). */
   formWebhook: '',
 
-  /** TODO: URL do webhook do n8n para o chat de IA. */
-  chatWebhook: '',
-
-  /** Liga o chat de IA no canto do ecrã (precisa de chatWebhook). */
-  chatEnabled: false,
+  /**
+   * Chat de IA no canto do ecrã (worker/chat.ts → /api/chat, modelo da OpenAI).
+   * A chave da OpenAI é um segredo na Cloudflare (OPENAI_API_KEY), nunca no código.
+   */
+  chatEnabled: true,
 
   /** Preço do site profissional: euros em PT e ES, dólares em EN. */
   sitePrice: { EUR: 100, USD: 100 } as Money,

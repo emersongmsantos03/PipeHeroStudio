@@ -48,7 +48,7 @@ const graph = {
     ...schema.map((s) => ({ provider: { '@id': orgId }, ...s })),
   ],
 };
-const chatOn = config.chatEnabled && !!config.chatWebhook;
+const chatOn = config.chatEnabled;
 ---
 <!doctype html>
 <html lang={LOCALE[lang]}>

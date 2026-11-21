@@ -1,10 +1,12 @@
 /**
  * Worker da Pipe Hero Studio.
  * - /api/contact: recebe o formulário e envia-o por e-mail (Cloudflare Email Service).
+ * - /api/chat: assistente de IA (worker/chat.ts).
  * - tudo o resto: ficheiros estáticos do Astro (dist/).
  */
+import { handleChat, type ChatEnv } from './chat';
 
-interface Env {
+interface Env extends ChatEnv {
   ASSETS: Fetcher;
   EMAIL: SendEmail;
   /** Opcional: endereço que recebe os pedidos (definido no painel). */
@@ -113,9 +115,10 @@ async function handleContact(request: Request, env: Env): Promise<Response> {
 }
 
 export default {
-  async fetch(request, env): Promise<Response> {
+  async fetch(request, env, ctx): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname === '/api/contact') return handleContact(request, env);
+    if (url.pathname === '/api/chat') return handleChat(request, env, ctx);
     if (url.pathname.startsWith('/api/')) return json({ ok: false, error: 'not_found' }, 404);
     return env.ASSETS.fetch(request);
   },

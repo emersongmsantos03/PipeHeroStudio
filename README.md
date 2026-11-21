@@ -38,7 +38,12 @@ npm run types        # regenera os tipos do Worker depois de mudar o wrangler.js
   - Vazio: o formulário envia para `/api/contact` (`worker/index.ts`), que manda o pedido por e-mail para `emerson@pipeherostudio.digital`, com Reply-To de quem preencheu.
   - Com URL: o nó Webhook do n8n deve aceitar `POST` e permitir a origem `https://pipeherostudio.digital` (CORS).
   - Os campos chegam como formulário: `nome`, `negocio`, `pais`, `email`, `telefone`, `servico`, `mensagem`, `privacidade`, `tipo`, `idioma`, `pagina`.
-- `chatWebhook` + `chatEnabled`: liga o chat de IA no canto do ecrã.
+- `chatEnabled`: liga o chat de IA no canto do ecrã. O chat corre no Worker (`worker/chat.ts`, rota `/api/chat`) com o modelo `gpt-5.4-mini` da OpenAI.
+  - Responde no idioma do visitante, tira dúvidas com base nos textos de `src/i18n/en.ts` e nos preços do config, e qualifica o lead.
+  - Com autorização do visitante, envia ao Emerson um resumo (qualificação, contactos, próximo passo e conversa completa). O resumo é sempre guardado no KV `LEADS` (painel: Storage & Databases → KV) e também é enviado por e-mail quando o envio estiver ativo.
+  - A chave da OpenAI é um segredo da Cloudflare: `npx wrangler secret put OPENAI_API_KEY`. Para testar localmente, ponha `OPENAI_API_KEY=...` em `.dev.vars` (o Git ignora este ficheiro).
+  - Para trocar de modelo sem mexer no código, crie no painel a variável `OPENAI_MODEL`.
+  - Proteções: só aceita pedidos do próprio site, 15 mensagens por minuto por visitante, mensagens até 1000 caracteres e respostas curtas. Defina também um limite de gastos mensal na OpenAI (Settings → Limits).
   - O webhook recebe JSON `{ sessionId, message, lang, page }`.
   - Deve responder `{ "reply": "..." }`.
 - `sitePrice`: preço do site em EUR (PT e ES) e USD (EN).
