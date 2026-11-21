@@ -2,14 +2,18 @@
  * /api/chat — assistente de IA da Pipe Hero Studio (OpenAI).
  * - Responde em streaming (texto simples) no idioma do visitante.
  * - Tira dúvidas com base nos textos do site (src/i18n/en.ts + src/config.ts).
- * - Qualifica o lead e, com autorização do visitante, envia um resumo por e-mail
- *   (e guarda-o sempre no KV LEADS, para nada se perder).
+ * - Qualifica o lead e, com autorização do visitante, grava-o no CRM (D1, painel admin.pipeherostudio.digital)
+ *   e envia um resumo por e-mail (cópia de segurança no KV LEADS).
+ * - Cada mensagem fica contada no CRM (events: chat_message) para as métricas da Ava.
  */
 import en from '../src/i18n/en';
 import { config } from '../src/config';
 import { notifyWhatsApp, type NotifyEnv } from './notify';
+import { ADMIN_URL, logEvent, saveLead, sendMail } from '../shared/crm';
 
 export interface ChatEnv extends NotifyEnv {
+  DB: D1Database;
+  RESEND_API_KEY?: string;
   OPENAI_API_KEY: string;
   OPENAI_MODEL?: string;
   EMAIL: SendEmail;
@@ -136,6 +140,25 @@ async function deliverLead(env: ChatEnv, lead: Lead, history: Msg[], meta: { ses
   const record = { ...lead, when, page: meta.page, country_ip: meta.country, sessionId: meta.sessionId, transcript: history };
   await env.LEADS.put(`lead:${when}:${meta.sessionId}`, JSON.stringify(record), { expirationTtl: 60 * 60 * 24 * 365 });
 
+  let leadId: number | null = null;
+  try {
+    const saved = await saveLead(
+      env.DB,
+      {
+        name: lead.name, email, phone, preferred_contact: lead.preferred_contact, business: lead.business,
+        location: lead.location, country: lead.location, language: lead.language, services: lead.services,
+        needs: lead.needs, current_situation: lead.current_situation, timeline: lead.timeline, budget: lead.budget,
+        decision_maker: lead.decision_maker, qualification: lead.qualification, qualification_reason: lead.qualification_reason,
+        summary: lead.summary, next_step: lead.next_step, page: meta.page, ip_country: meta.country, transcript: history,
+      },
+      { source: 'chat', sessionId: meta.sessionId, note: `${lead.is_update ? 'Atualização' : 'Resumo'} da Ava (${lead.qualification}): ${lead.summary}` },
+    );
+    leadId = saved.id;
+  } catch (e) {
+    console.error('chat: CRM save failed (lead in KV)', (e as Error).message);
+  }
+  const link = leadId ? `${ADMIN_URL}/#/leads/${leadId}` : ADMIN_URL;
+
   const rows: [string, string][] = [
     ['Qualificação', `${lead.qualification.toUpperCase()} — ${lead.qualification_reason}`],
     ['Nome', lead.name], ['E-mail', email || '—'], ['Telefone/WhatsApp', phone || '—'],
@@ -146,10 +169,11 @@ async function deliverLead(env: ChatEnv, lead: Lead, history: Msg[], meta: { ses
     ['Página', meta.page || '—'],
   ];
   const transcript = history.map((m) => `${m.role === 'user' ? 'Visitante' : 'Ava'}: ${m.content}`).join('\n\n');
-  const text = `${lead.summary}\n\n${rows.map(([k, v]) => `${k}: ${v}`).join('\n')}\n\n--- Conversa ---\n${transcript}\n`;
+  const text = `${lead.summary}\n\nAbrir no CRM: ${link}\n\n${rows.map(([k, v]) => `${k}: ${v}`).join('\n')}\n\n--- Conversa ---\n${transcript}\n`;
   const html =
     `<div style="font-family:system-ui,sans-serif;font-size:14px;color:#10182b">` +
     `<p style="font-size:15px"><strong>${esc(lead.summary)}</strong></p>` +
+    `<p><a href="${link}" style="display:inline-block;background:#ffc83d;color:#10182b;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:600">Abrir no CRM</a></p>` +
     `<table cellpadding="6" style="border-collapse:collapse">${rows.map(([k, v]) => `<tr><td style="color:#4a556b;vertical-align:top">${esc(k)}</td><td>${esc(v)}</td></tr>`).join('')}</table>` +
     `<h3 style="margin-top:24px">Conversa</h3>` +
     history.map((m) => `<p><strong>${m.role === 'user' ? 'Visitante' : 'Ava'}:</strong> ${esc(m.content).replace(/\n/g, '<br>')}</p>`).join('') +
@@ -158,26 +182,24 @@ async function deliverLead(env: ChatEnv, lead: Lead, history: Msg[], meta: { ses
   const wa =
     `${lead.is_update ? 'Atualização' : 'Novo lead'} (${lead.qualification.toUpperCase()}) do chat\n` +
     `${lead.name}${lead.business ? ' — ' + lead.business : ''}\n` +
-    `${[email, phone].filter(Boolean).join(' · ')}\n\n${lead.summary}\n\nPróximo passo: ${lead.next_step || '—'}`;
+    `${[email, phone].filter(Boolean).join(' · ')}\n\n${lead.summary}\n\nPróximo passo: ${lead.next_step || '—'}\n\n${link}`;
   const whatsapp = notifyWhatsApp(env, wa);
 
-  let emailed = false;
-  try {
-    await env.EMAIL.send({
+  const emailed = await sendMail(
+    env,
+    {
       to: env.CONTACT_TO || config.email,
       from: FROM,
       ...(email ? { replyTo: email } : {}),
-      subject: `${lead.is_update ? 'Atualização' : 'Lead'} (${lead.qualification}) do chat: ${lead.name}${lead.business ? ' — ' + lead.business : ''}`.replace(/[\r\n]+/g, ' ').slice(0, 150),
+      subject: `${lead.is_update ? 'Atualização' : 'Lead'} (${lead.qualification}) do chat: ${lead.name}${lead.business ? ' — ' + lead.business : ''}`,
       text,
       html,
-    });
-    emailed = true;
-  } catch (e) {
-    const err = e as { code?: string; message?: string };
-    console.error('chat: email failed (lead saved in KV)', err.code, err.message);
-  }
+    },
+    { source: 'ava', leadId, kind: 'lead_chat' },
+  );
   const whatsapped = await whatsapp;
-  if (!emailed && !whatsapped) console.error('chat: lead NOT delivered (only in KV)', `lead:${when}:${meta.sessionId}`);
+  if (whatsapped) await logEvent(env.DB, 'whatsapp_sent', 'ava', { leadId });
+  if (!emailed && !whatsapped) console.error('chat: lead NOT delivered by email/WhatsApp (saved in CRM/KV)', leadId, `lead:${when}:${meta.sessionId}`);
   return { ok: true, saved: true, emailed, whatsapp: whatsapped };
 }
 
@@ -227,6 +249,9 @@ export async function handleChat(request: Request, env: ChatEnv, ctx: ExecutionC
     page: String(body.page || '').slice(0, 120),
     country: String((request as Request & { cf?: { country?: string } }).cf?.country || ''),
   };
+  ctx.waitUntil(
+    logEvent(env.DB, 'chat_message', 'ava', { ref: meta.sessionId, meta: { page: meta.page, lang, country: meta.country, n: history.length } }),
+  );
   const context = `\n\nCONTEXT: page language = ${lang}; page = ${meta.page || 'unknown'}; visitor country (from IP) = ${meta.country || 'unknown'}; summary already sent in this chat = ${body.leadSent ? 'yes' : 'no'}.`;
 
   const messages: unknown[] = [{ role: 'system', content: SYSTEM + context }, ...history];

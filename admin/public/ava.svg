@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Ava">
+  <defs><clipPath id="c"><circle cx="48" cy="48" r="48"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="96" height="96" fill="#FFC83D"/>
+    <circle cx="78" cy="18" r="22" fill="#FFD76E"/>
+    <!-- cabelo (atrás) -->
+    <path d="M29 44C28 27 38 20 48 20s20 7 19 24l1 22c-5 5-12 4-15-1H43c-3 5-10 6-15 1z" fill="#3A2418"/>
+    <!-- pescoço -->
+    <path d="M41 56h14v13a7 7 0 0 1-14 0z" fill="#D9946B"/>
+    <!-- corpo -->
+    <path d="M12 98c2-19 16-28 36-28s34 9 36 28z" fill="#10182B"/>
+    <path d="M40 70l8 9 8-9" fill="none" stroke="#EEF1F4" stroke-width="2.6" stroke-linejoin="round"/>
+    <circle cx="66" cy="84" r="3.2" fill="#FFC83D"/>
+    <!-- cara -->
+    <ellipse cx="48" cy="44" rx="15.5" ry="17.5" fill="#F0B48A"/>
+    <!-- franja -->
+    <path d="M32 43c-1-12 7-19 17-19 9 0 16 6 15.5 17-7-1-12-5-15-10-3 6-9 10-17.5 12z" fill="#3A2418"/>
+    <!-- olhos, bochechas, sorriso -->
+    <circle cx="42" cy="46" r="1.9" fill="#10182B"/>
+    <circle cx="54.5" cy="46" r="1.9" fill="#10182B"/>
+    <circle cx="38.5" cy="51.5" r="2.6" fill="#E8836B" opacity=".45"/>
+    <circle cx="58" cy="51.5" r="2.6" fill="#E8836B" opacity=".45"/>
+    <path d="M43.5 53.5q4.8 4 9.5 0" fill="none" stroke="#10182B" stroke-width="1.9" stroke-linecap="round"/>
+    <!-- auscultadores com microfone -->
+    <path d="M30.5 45a17.5 19 0 0 1 35 0" fill="none" stroke="#10182B" stroke-width="3.4" stroke-linecap="round"/>
+    <rect x="27" y="40" width="7" height="12" rx="3.5" fill="#10182B"/>
+    <rect x="62" y="40" width="7" height="12" rx="3.5" fill="#10182B"/>
+    <path d="M31 51q1 9 10 9.5" fill="none" stroke="#10182B" stroke-width="2.4" stroke-linecap="round"/>
+    <circle cx="42.5" cy="60.5" r="2.6" fill="#10182B"/>
+  </g>
+</svg>

@@ -1,11 +1,13 @@
 /**
  * Worker da Pipe Hero Studio.
- * - /api/contact: recebe o formulário e envia-o por e-mail (Cloudflare Email Service).
+ * - /api/contact: recebe o formulário, grava o lead no CRM (D1) e avisa por e-mail (Cloudflare Email Service).
  * - /api/chat: assistente de IA (worker/chat.ts).
  * - tudo o resto: ficheiros estáticos do Astro (dist/).
  */
+import { WorkerEntrypoint } from 'cloudflare:workers';
 import { handleChat, type ChatEnv } from './chat';
 import { notifyWhatsApp } from './notify';
+import { ADMIN_URL, logEvent, saveLead, sendMail, sendViaResend, type Mail } from '../shared/crm';
 
 interface Env extends ChatEnv {
   ASSETS: Fetcher;
@@ -13,6 +15,8 @@ interface Env extends ChatEnv {
   /** Opcional: endereço que recebe os pedidos (definido no painel). */
   CONTACT_TO?: string;
 }
+
+const SERVICE_MAP: Record<string, string> = { site: 'website', chat: 'chat', crm: 'crm', agents: 'ai_agents', clinics: 'clinic_assistant', unsure: 'other' };
 
 const DEFAULT_TO = 'emerson@pipeherostudio.digital';
 const FROM = { email: 'site@pipeherostudio.digital', name: 'Site Pipe Hero Studio' };
@@ -82,6 +86,34 @@ async function handleContact(request: Request, env: Env): Promise<Response> {
     return fail(400, 'validation');
   }
 
+  // 1) Guarda no CRM primeiro: mesmo que o e-mail falhe, o lead não se perde.
+  const country = String((request as Request & { cf?: { country?: string } }).cf?.country || '');
+  let leadId: number | null = null;
+  try {
+    const saved = await saveLead(
+      env.DB,
+      {
+        name: data.nome,
+        business: data.negocio,
+        business_type: data.tipo,
+        country: data.pais,
+        email: data.email,
+        phone: data.telefone,
+        language: lang,
+        services: [SERVICE_MAP[data.servico] || data.servico],
+        needs: data.mensagem,
+        page: data.pagina,
+        ip_country: country,
+      },
+      { source: 'form', note: `Pedido pelo formulário do site (${data.servico}):\n${data.mensagem}` },
+    );
+    leadId = saved.id;
+  } catch (e) {
+    console.error('contact: CRM save failed', (e as Error).message);
+  }
+  await logEvent(env.DB, 'form_submit', 'site', { leadId, meta: { servico: data.servico, pagina: data.pagina, lang } });
+
+  const link = leadId ? `${ADMIN_URL}/#/leads/${leadId}` : ADMIN_URL;
   const rows: [string, string][] = [
     ['Nome', data.nome],
     ['Negócio', data.negocio],
@@ -93,32 +125,45 @@ async function handleContact(request: Request, env: Env): Promise<Response> {
     ['Idioma', lang],
     ['Página', data.pagina || '—'],
   ];
-  const text = `${rows.map(([k, v]) => `${k}: ${v}`).join('\n')}\n\nMensagem:\n${data.mensagem}\n`;
+  const text = `${rows.map(([k, v]) => `${k}: ${v}`).join('\n')}\n\nMensagem:\n${data.mensagem}\n\nAbrir no CRM: ${link}\n`;
   const html = `<table cellpadding="6" style="border-collapse:collapse;font-family:system-ui,sans-serif;font-size:14px">${rows
     .map(([k, v]) => `<tr><td style="color:#4a556b">${esc(k)}</td><td><strong>${esc(v)}</strong></td></tr>`)
-    .join('')}</table><p style="font-family:system-ui,sans-serif;font-size:14px;white-space:pre-wrap">${esc(data.mensagem)}</p>`;
+    .join('')}</table><p style="font-family:system-ui,sans-serif;font-size:14px;white-space:pre-wrap">${esc(data.mensagem)}</p>` +
+    `<p style="font-family:system-ui,sans-serif;font-size:14px"><a href="${link}" style="display:inline-block;background:#ffc83d;color:#10182b;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:600">Abrir no CRM</a></p>`;
 
   const whatsapp = notifyWhatsApp(
     env,
-    `Novo pedido do site (${data.servico})\n${data.nome} — ${data.negocio} (${data.pais})\n${data.email}${data.telefone ? ' · ' + data.telefone : ''}\n\n${data.mensagem}`,
+    `Novo pedido do site (${data.servico})\n${data.nome} — ${data.negocio} (${data.pais})\n${data.email}${data.telefone ? ' · ' + data.telefone : ''}\n\n${data.mensagem}\n\n${link}`,
   );
-  let emailed = false;
-  try {
-    await env.EMAIL.send({
+  const emailed = await sendMail(
+    env,
+    {
       to: env.CONTACT_TO || DEFAULT_TO,
       from: FROM,
       replyTo: data.email,
-      subject: `Novo pedido (${data.servico}): ${data.negocio}`.replace(/[\r\n]+/g, ' ').slice(0, 150),
+      subject: `Novo pedido (${data.servico}): ${data.negocio}`,
       text,
       html,
-    });
-    emailed = true;
-  } catch (e) {
-    const err = e as { code?: string; message?: string };
-    console.error('contact: send failed', err.code, err.message);
-  }
-  if (!(await whatsapp) && !emailed) return fail(502, 'send_failed');
+    },
+    { source: 'site', leadId, kind: 'lead_form' },
+  );
+  const whatsapped = await whatsapp;
+  if (whatsapped) await logEvent(env.DB, 'whatsapp_sent', 'site', { leadId });
+  // O lead ficou no CRM: só falha se nem isso nem os avisos funcionaram.
+  if (!whatsapped && !emailed && !leadId) return fail(502, 'send_failed');
   return done();
+}
+
+/**
+ * Ligação interna para o painel (admin.pipeherostudio.digital) enviar e-mails pelo Resend,
+ * usando a chave guardada neste Worker. Só acessível por service binding (RPC), nunca pela internet.
+ */
+export class Mailer extends WorkerEntrypoint<Env> {
+  async send(mail: Mail): Promise<{ ok: boolean; error?: string }> {
+    if (!this.env.RESEND_API_KEY) return { ok: false, error: 'RESEND_API_KEY em falta no Worker do site' };
+    if (!mail?.to || mail.from?.email !== 'site@pipeherostudio.digital') return { ok: false, error: 'remetente não permitido' };
+    return sendViaResend(this.env.RESEND_API_KEY, mail);
+  }
 }
 
 export default {

@@ -105,6 +105,35 @@ Sem estas duas variáveis, o aviso por WhatsApp fica desligado. Os leads do chat
 - Cabeçalhos de segurança e cache: `public/_headers`.
 - Logs do Worker: `npx wrangler tail pipeherostudio`.
 
+## Painel: CRM, financeiro e métricas (admin.pipeherostudio.digital)
+
+Um segundo Worker (`admin/`, nome `pipehero-admin`) com login. Partilha com o site a base de dados D1 `pipehero-crm`.
+
+- **Visão geral:** leads por origem, conversas da Ava, e-mails enviados, funil, follow-ups, receita, lucro, a receber, recorrente.
+- **CRM:** quadro por etapas (arrastar e soltar), lista com filtros e exportação CSV, ficha do lead com notas, contactos, próxima ação, conversa da Ava e pagamentos.
+- **Financeiro:** receitas e despesas, pendentes, recorrentes, categorias. Marcar um lead como “Ganho” pode lançar a receita sozinho.
+- **Ava e agentes:** conversas, conversão, páginas, registo de todos os e-mails enviados (Ava, formulário, agentes externos, avisos).
+- **Integrações (admin):** chave da API para agentes externos, prompt pronto para configurar o agente, e-mail de teste, resumo diário.
+- **Usuários (admin):** quem se cadastra fica “à espera” até ser aprovado, e o Emerson recebe um e-mail.
+
+Como os leads entram:
+- Formulário do site → `/api/contact` grava no CRM (sem duplicar o mesmo e-mail com negócio aberto) e avisa por e-mail com link para a ficha.
+- Ava → quando o visitante aceita, grava no CRM com qualificação, resumo e conversa. Cada mensagem conta para as métricas.
+- Agentes externos (n8n, Make…) → `POST https://admin.pipeherostudio.digital/api/ingest/lead` e `/api/ingest/event`, com `Authorization: Bearer <chave>` (a chave e o prompt estão em Integrações).
+
+E-mails: o Cloudflare Email Service não consegue entregar na caixa Zoho (`E_DELIVERY_FAILED`), por isso os envios caem no **Resend** (segredo `RESEND_API_KEY` do Worker do site). O painel envia pelo mesmo Resend através de uma ligação interna ao site (service binding `MAILER` → `Mailer`, sem acesso pela internet). Todos os envios, com sucesso ou falha, ficam no registo de e-mails do painel.
+
+Comandos:
+
+```bash
+npm run dev:admin      # painel local em http://localhost:8788 (base de dados local)
+npm run deploy:admin   # publica o painel (o push para main só publica o site)
+npm run deploy:all     # site + painel
+npm run db:migrate     # aplica migrations/ na base de dados de produção
+```
+
+Resumo diário: cron às 08:00 UTC (`admin/wrangler.jsonc`), só sai se houver novidades. Liga e desliga em Integrações.
+
 ## Estrutura
 
 ```
@@ -116,7 +145,10 @@ src/
   views/                 uma vista por página
   scripts/               JavaScript das ilhas (gancho do hero, formulário, conversa de exemplo)
   pages/                 rotas: /[lang]/[...slug], raiz, 404, sitemap.xml, imagens OG
-worker/index.ts          Worker da Cloudflare: /api/contact (formulário → e-mail)
+worker/index.ts          Worker do site: /api/contact (formulário → CRM + e-mail), /api/chat (Ava), Mailer (RPC)
+shared/crm.ts            gravar leads, contar eventos e enviar e-mail (site e painel)
+migrations/              esquema da base de dados D1 (pipehero-crm)
+admin/                   painel admin.pipeherostudio.digital (src/ = API, public/ = aplicação)
 wrangler.jsonc           configuração da Cloudflare
 public/                  fontes (subconjunto latino), favicon, robots.txt
 ```

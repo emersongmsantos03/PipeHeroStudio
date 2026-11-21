@@ -8,7 +8,11 @@
     "preview": "npm run build && wrangler dev",
     "deploy": "npm run build && wrangler deploy",
     "check:links": "node scripts/check-links.mjs",
-    "types": "wrangler types"
+    "types": "wrangler types && wrangler types -c admin/wrangler.jsonc admin/worker-configuration.d.ts",
+    "dev:admin": "wrangler dev -c admin/wrangler.jsonc --port 8788",
+    "deploy:admin": "wrangler deploy -c admin/wrangler.jsonc",
+    "deploy:all": "npm run deploy && npm run deploy:admin",
+    "db:migrate": "wrangler d1 migrations apply pipehero-crm --remote"
   },
   "dependencies": {
     "@fontsource/geist-mono": "^5.3.0",

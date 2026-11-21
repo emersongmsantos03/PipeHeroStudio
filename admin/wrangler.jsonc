@@ -1,0 +1,45 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  // Painel da Pipe Hero Studio: CRM, financeiro, leads, métricas da Ava. Só com login.
+  // Deploy: npm run deploy:admin (na raiz do projeto).
+  "name": "pipehero-admin",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-20",
+
+  // A aplicação (HTML/CSS/JS) é estática e não tem dados. Os dados só saem por /api/*, com sessão.
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+
+  // A mesma base de dados do site (o site grava os leads, o painel lê e gere).
+  "d1_databases": [
+    { "binding": "DB", "database_name": "pipehero-crm", "database_id": "9be8dee8-5f39-4557-8a45-0a100e514ec1", "migrations_dir": "../migrations" }
+  ],
+
+  // Avisos por e-mail (novos cadastros, resumo diário, teste).
+  "send_email": [{ "name": "EMAIL", "allowed_sender_addresses": ["site@pipeherostudio.digital"] }],
+
+  // Envio de e-mail pelo Resend através do Worker do site (que guarda a chave). Ligação interna, não pública.
+  "services": [{ "binding": "MAILER", "service": "pipeherostudio", "entrypoint": "Mailer" }],
+
+  // Leads antigos da Ava (para importar) — o mesmo KV do site.
+  "kv_namespaces": [{ "binding": "LEADS", "id": "a389ac5cabd240fca436420cb9d66dfc" }],
+
+  // Proteção contra tentativas de senha: 10 por minuto por IP. Cadastros: 3 por minuto. API de agentes: 120 por minuto.
+  "ratelimits": [
+    { "name": "LOGIN_RL", "namespace_id": "1002", "simple": { "limit": 10, "period": 60 } },
+    { "name": "SIGNUP_RL", "namespace_id": "1003", "simple": { "limit": 3, "period": 60 } },
+    { "name": "INGEST_RL", "namespace_id": "1004", "simple": { "limit": 120, "period": 60 } }
+  ],
+
+  // Resumo diário por e-mail às 08:00 UTC (08:00 em Lisboa no inverno, 09:00 no verão).
+  "triggers": { "crons": ["0 8 * * *"] },
+
+  // NOTIFY_TO (opcional): para onde vão os avisos. Por omissão: emerson@pipeherostudio.digital.
+  "keep_vars": true,
+  "observability": { "enabled": true },
+  "routes": [{ "pattern": "admin.pipeherostudio.digital", "custom_domain": true }]
+}
