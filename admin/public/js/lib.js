@@ -86,7 +86,18 @@ export const CURRENCIES = ['EUR', 'USD', 'BRL', 'GBP'];
 
 export const srcTag = (s) => `<span class="src src-${esc(s)}"><i></i>${esc(SOURCE[s] || s)}</span>`;
 export const qualTag = (q) => (q ? `<span class="badge ${esc(q)}"><span class="dot"></span>${esc(QUAL[q] || q)}</span>` : '');
-export const stageTag = (s) => `<span class="badge ${s === 'won' ? 'won' : s === 'lost' ? 'lost' : ''}">${esc(STAGE[s] || s)}</span>`;
+export const stageTag = (s) => `<span class="stage st-${esc(s)}">${esc(STAGE[s] || s)}</span>`;
+/** Probabilidade de fecho por etapa (quando o lead não tem uma definida). */
+export const STAGE_PROB = { new: 10, contacted: 20, meeting: 40, proposal: 60, won: 100, lost: 0 };
+export const probOf = (l) => (l.probability ?? STAGE_PROB[l.stage] ?? 0);
+export const TASK_TYPES = [['todo', 'Tarefa', 'flag'], ['call', 'Ligar', 'phone'], ['email', 'E-mail', 'mail'], ['whatsapp', 'WhatsApp', 'whatsapp'], ['meeting', 'Reunião', 'calendar']];
+export const TASK_TYPE = Object.fromEntries(TASK_TYPES.map(([k, l, i]) => [k, { label: l, icon: i }]));
+export const ACT = {
+  created: ['spark', 'Lead criado'], note: ['note', 'Nota'], call: ['phone', 'Ligação'], email: ['mail', 'E-mail'], whatsapp: ['whatsapp', 'WhatsApp'],
+  meeting: ['calendar', 'Reunião'], stage: ['flag', 'Etapa'], update: ['edit', 'Atualização'], system: ['bot', 'Sistema'], task: ['check', 'Tarefa'],
+};
+export const tagsOf = (s) => [...new Set(String(s || '').split(',').map((t) => t.trim()).filter(Boolean))];
+export const tagChips = (s, max = 99) => { const t = tagsOf(s); return t.slice(0, max).map((x) => `<span class="tag" title="${esc(x)}">${esc(x)}</span>`).join('') + (t.length > max ? `<span class="tag">+${t.length - max}</span>` : ''); };
 export const safeParse = (s, d) => { try { return s ? JSON.parse(s) ?? d : d; } catch { return d; } };
 export const services = (json) => {
   try { return (JSON.parse(json || '[]') || []).map((s) => SERVICES[s] || s); } catch { return []; }
@@ -124,6 +135,28 @@ const P = {
   logout: '<path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 8l-4 4 4 4M6 12h10"/>',
   check: '<path d="M5 12l5 5 9-10"/>',
   globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
+  tasks: '<rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M8 12l3 3 5-6"/>',
+  chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  template: '<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/>',
+  more: '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
+  tag: '<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="7.5" cy="7.5" r="1.3"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  building: '<path d="M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16M15 9h4a1 1 0 0 1 1 1v11M3 21h18M8 8h3M8 12h3M8 16h3"/>',
+  target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
+  trend: '<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+  alert: '<path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18h.01"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+  down: '<path d="M6 9l6 6 6-6"/>',
+  right: '<path d="M9 6l6 6-6 6"/>',
+  upload: '<path d="M12 16V5M7 10l5-5 5 5M5 20h14"/>',
+  inbox: '<path d="M3 13l3-8h12l3 8v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 13h5l1 3h6l1-3h5"/>',
+  send: '<path d="M21 3L10 14M21 3l-7 18-4-7-7-4z"/>',
+  euro: '<path d="M17 6.5A7 7 0 1 0 17 17.5M4 10h9M4 14h9"/>',
+  layers: '<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>',
+  zap: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
+  dot: '<circle cx="12" cy="12" r="3"/>',
 };
 export const icon = (name) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name] || ''}</svg>`;
 export const LOGO = `<svg viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="11" fill="#10182B" stroke="#2a3550"/><path d="M14 32 35 16" stroke="#EEF1F4" stroke-width="2.6" stroke-linecap="round"/><circle cx="14" cy="32" r="3.6" fill="#EEF1F4"/><circle cx="24.5" cy="24" r="3.4" fill="#EEF1F4"/><circle cx="35" cy="16" r="4.4" fill="#FFC83D"/></svg>`;
@@ -132,7 +165,8 @@ export const LOGO = `<svg viewBox="0 0 48 48" aria-hidden="true"><rect width="48
 export function toast(msg, err = false) {
   const el = document.createElement('div');
   el.className = `toast${err ? ' err' : ''}`;
-  el.textContent = msg;
+  el.innerHTML = `${icon(err ? 'alert' : 'check')}<span></span>`;
+  el.lastChild.textContent = msg;
   document.getElementById('toasts').append(el);
   setTimeout(() => el.remove(), err ? 6000 : 3200);
 }
@@ -330,3 +364,165 @@ export const dayLabel = (l, short) => {
   const [, m, d] = l.split('-');
   return short ? `${d}/${m}` : date(l);
 };
+
+/* ---------- Preferências locais (só conveniência; o painel funciona sem elas) ---------- */
+export function getPref(k, d) { try { return localStorage.getItem(k) ?? d; } catch { return d; } }
+export function setPref(k, v) { try { localStorage.setItem(k, v); } catch { /* sem armazenamento */ } }
+
+/* ---------- Avatares ---------- */
+const AV = [['#ffc83d', '#10182b'], ['#2a78d6', '#fff'], ['#12a08a', '#fff'], ['#eb6834', '#fff'], ['#7c5cd6', '#fff'], ['#d6457a', '#fff'], ['#3d4a63', '#fff'], ['#16935a', '#fff']];
+export function avatar(name, size = '', title = '') {
+  if (!name) return `<span class="avatar av-empty ${size}" title="${esc(title || 'Sem responsável')}">${icon('user')}</span>`;
+  let h = 0;
+  for (const c of String(name)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const [bg, fg] = AV[h % AV.length];
+  return `<span class="avatar ${size}" style="--av:${bg};--av-ink:${fg}" title="${esc(title || name)}">${esc(initials(name))}</span>`;
+}
+
+/* ---------- Estados vazios e carregamento ---------- */
+export const emptyState = (ico, title, text = '', action = '') =>
+  `<div class="empty"><span class="e-ico">${icon(ico)}</span><b>${title}</b>${text ? `<span>${text}</span>` : ''}${action}</div>`;
+export const skeleton = (kind = 'dash') =>
+  kind === 'list'
+    ? `<div class="sk-page"><div class="sk" style="height:36px;max-width:640px"></div><div class="sk sk-block" style="height:420px"></div></div>`
+    : `<div class="sk-page"><div class="sk-tiles">${'<div class="sk"></div>'.repeat(4)}</div><div class="cols"><div class="sk sk-block"></div><div class="sk sk-block"></div></div></div>`;
+
+/* ---------- Menu suspenso ---------- */
+let openMenu = null;
+export function closeMenu() { if (openMenu) { openMenu.el.remove(); openMenu.anchor?.setAttribute('aria-expanded', 'false'); openMenu = null; } }
+/**
+ * menu(anchor, items, { align }) — items: { label, icon, onClick, danger, sel, href, kbd } | 'sep' | { header }
+ */
+export function menu(anchor, items, { align = 'left', up = false } = {}) {
+  if (openMenu?.anchor === anchor) return closeMenu();
+  closeMenu();
+  const el = document.createElement('div');
+  el.className = 'menu';
+  el.setAttribute('role', 'menu');
+  el.innerHTML = items.map((it, i) => {
+    if (it === 'sep') return '<hr>';
+    if (it.header) return `<div class="menu-label">${esc(it.header)}</div>`;
+    const cls = `${it.danger ? 'danger' : ''} ${it.sel ? 'sel' : ''}`;
+    const inner = `${it.icon ? icon(it.icon) : it.html || ''}<span>${esc(it.label)}</span>${it.kbd ? `<kbd class="kbd">${esc(it.kbd)}</kbd>` : ''}`;
+    return it.href ? `<a role="menuitem" class="${cls}" href="${it.href}" ${it.ext ? 'target="_blank" rel="noopener"' : ''} data-i="${i}">${inner}</a>` : `<button type="button" role="menuitem" class="${cls}" data-i="${i}">${inner}</button>`;
+  }).join('');
+  document.body.append(el);
+  const r = anchor.getBoundingClientRect();
+  const w = el.offsetWidth, h = el.offsetHeight;
+  let x = align === 'right' ? r.right - w : r.left;
+  let y = up || r.bottom + h + 8 > innerHeight ? r.top - h - 6 : r.bottom + 6;
+  el.style.left = `${Math.max(8, Math.min(x, innerWidth - w - 8))}px`;
+  el.style.top = `${Math.max(8, y)}px`;
+  anchor.setAttribute('aria-expanded', 'true');
+  openMenu = { el, anchor };
+  el.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-i]');
+    if (!b) return;
+    const it = items[Number(b.dataset.i)];
+    closeMenu();
+    it.onClick?.();
+  });
+  el.querySelector('[data-i]')?.focus({ preventScroll: true });
+  el.addEventListener('keydown', (e) => {
+    const all = [...el.querySelectorAll('[data-i]')];
+    const i = all.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown') { e.preventDefault(); all[(i + 1) % all.length]?.focus(); }
+    if (e.key === 'ArrowUp') { e.preventDefault(); all[(i - 1 + all.length) % all.length]?.focus(); }
+    if (e.key === 'Escape') { closeMenu(); anchor.focus(); }
+  });
+}
+document.addEventListener('mousedown', (e) => { if (openMenu && !openMenu.el.contains(e.target) && !openMenu.anchor.contains(e.target)) closeMenu(); });
+addEventListener('hashchange', closeMenu);
+addEventListener('resize', closeMenu);
+document.addEventListener('scroll', (e) => { if (openMenu && !openMenu.el.contains(e.target)) closeMenu(); }, true);
+
+/* ---------- Equipa (para responsáveis) ---------- */
+let teamCache = null;
+export async function team(force = false) {
+  if (!teamCache || force) teamCache = api('/team').then((r) => r.users).catch((e) => { teamCache = null; throw e; });
+  return teamCache;
+}
+export const ownerOptions = (users, sel, none = 'Sem responsável') =>
+  `<option value="">${esc(none)}</option>${users.map((u) => `<option value="${u.id}"${Number(sel) === u.id ? ' selected' : ''}>${esc(u.name)}</option>`).join('')}`;
+
+/* ---------- Datas relativas ---------- */
+export const withToday = (path) => `${path}${path.includes('?') ? '&' : '?'}today=${todayStr()}`;
+export function daysFromToday(ymd) {
+  if (!ymd) return null;
+  const [y, m, d] = ymd.split('-').map(Number);
+  const a = new Date(y, m - 1, d);
+  const t = new Date(); t.setHours(0, 0, 0, 0);
+  return Math.round((a - t) / 864e5);
+}
+const WD = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+/** "Hoje", "Amanhã", "Ontem", "qui, 27/11", "Atrasada 3 d". */
+export function dueLabel(ymd, time) {
+  const n = daysFromToday(ymd);
+  if (n == null) return 'Sem data';
+  const t = time ? ` · ${time}` : '';
+  if (n === 0) return `Hoje${t}`;
+  if (n === 1) return `Amanhã${t}`;
+  if (n === -1) return `Ontem${t}`;
+  if (n < 0) return `Há ${-n} dias${t}`;
+  const [y, m, d] = ymd.split('-').map(Number);
+  if (n < 7) return `${WD[new Date(y, m - 1, d).getDay()]}, ${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}${t}`;
+  return `${date(ymd)}${t}`;
+}
+export const dueClass = (ymd) => { const n = daysFromToday(ymd); return n == null ? '' : n < 0 ? 'overdue' : n === 0 ? 'due-today' : ''; };
+export const daysSince = (iso) => (iso ? Math.floor((Date.now() - new Date(iso).getTime()) / 864e5) : null);
+export function nextWeekday(n = 1) {
+  const d = new Date(); d.setDate(d.getDate() + 7 - ((d.getDay() + 6) % 7) + (n - 1));
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+export const greeting = () => { const h = new Date().getHours(); return h < 5 ? 'Boa noite' : h < 12 ? 'Bom dia' : h < 19 ? 'Boa tarde' : 'Boa noite'; };
+
+/* ---------- Modelos de mensagem ---------- */
+export const TEMPLATE_VARS = [['{primeiro_nome}', 'Primeiro nome'], ['{nome}', 'Nome completo'], ['{negocio}', 'Negócio'], ['{meu_nome}', 'O seu nome']];
+export function fillTemplate(text, lead = {}, user = {}) {
+  const first = (lead.name || '').trim().split(/\s+/)[0] || '';
+  const me = (user.name || '').trim().split(/\s+/)[0] || '';
+  return String(text || '')
+    .replaceAll('{primeiro_nome}', first)
+    .replaceAll('{nome}', lead.name || '')
+    .replaceAll('{negocio}', lead.business || 'o seu projeto')
+    .replaceAll('{meu_nome}', me || 'Emerson')
+    // Sem nome: "Olá !" → "Olá!", "Olá ," → "Olá,"
+    .replace(/(Olá|Oi|Bom dia|Boa tarde)\s+([!,.?])/g, '$1$2');
+}
+export const digits = (s) => (s || '').replace(/\D/g, '');
+export const waLink = (phone, text = '') => (digits(phone).length >= 8 ? `https://wa.me/${digits(phone)}${text ? `?text=${encodeURIComponent(text)}` : ''}` : '');
+export const mailLink = (email, subject = '', body = '') => (email ? `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}` : '');
+
+/* ---------- CSV ---------- */
+/** Lê CSV (vírgula ou ponto e vírgula, com aspas). Devolve { headers, rows }. */
+export function parseCsv(text) {
+  text = text.replace(/^﻿/, '');
+  const first = text.split(/\r?\n/, 1)[0] || '';
+  const delim = (first.match(/;/g) || []).length > (first.match(/,/g) || []).length ? ';' : first.includes('\t') && !first.includes(',') ? '\t' : ',';
+  const out = [];
+  let row = [], cell = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"' && text[i + 1] === '"') { cell += '"'; i++; }
+      else if (c === '"') q = false;
+      else cell += c;
+    } else if (c === '"') q = true;
+    else if (c === delim) { row.push(cell); cell = ''; }
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      row.push(cell); cell = '';
+      if (row.some((x) => x.trim())) out.push(row);
+      row = [];
+    } else cell += c;
+  }
+  row.push(cell);
+  if (row.some((x) => x.trim())) out.push(row);
+  const headers = (out.shift() || []).map((h) => h.trim());
+  return { headers, rows: out };
+}
+
+export function debounce(fn, ms = 200) {
+  let t;
+  return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+}

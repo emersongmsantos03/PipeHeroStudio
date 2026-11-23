@@ -4,7 +4,11 @@
  *  /api/auth/*       login, logout, pedido de acesso (cadastro → aprovação + e-mail ao Emerson)
  *  /api/me           conta do utilizador
  *  /api/stats        visão geral (leads, Ava, e-mails, financeiro)
- *  /api/leads        CRM (lista, quadro, detalhe, notas, etapas)
+ *  /api/leads        CRM (lista, quadro, detalhe, notas, etapas, ações em massa, importação CSV)
+ *  /api/tasks        tarefas (follow-ups, chamadas, reuniões) por responsável
+ *  /api/templates    modelos de mensagem para WhatsApp / e-mail
+ *  /api/reports      relatórios (taxa de ganho, motivos de perda, previsão, equipa)
+ *  /api/team         equipa ativa (para atribuir leads e tarefas)
  *  /api/transactions financeiro
  *  /api/agent        métricas da Ava e de agentes externos, registo de e-mails
  *  /api/users        utilizadores (admin)
@@ -21,8 +25,15 @@ import { FROM, STAGE_LABEL, getSetting, notifyTo, setSetting, type AppEnv } from
 
 const CURRENCIES = ['EUR', 'USD', 'BRL', 'GBP'];
 const ACTIVITY_TYPES = ['note', 'call', 'email', 'whatsapp', 'meeting'];
+const TASK_TYPES = ['todo', 'call', 'email', 'whatsapp', 'meeting'];
+const TEMPLATE_CHANNELS = ['any', 'whatsapp', 'email'];
+/** Atividades feitas por pessoas (contam como "última atividade"). */
+const HUMAN_ACTS = `'note','call','email','whatsapp','meeting','task'`;
+/** Probabilidade de fecho por etapa, quando o lead não tem uma definida. */
+const STAGE_PROB: Record<string, number> = { new: 10, contacted: 20, meeting: 40, proposal: 60, won: 100, lost: 0 };
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 class HttpError extends Error {
   constructor(public status: number, public code: string, message?: string) {
@@ -65,6 +76,11 @@ const intId = (s: string) => {
   return n;
 };
 const today = () => new Date().toISOString().slice(0, 10);
+/** "Hoje" no fuso do utilizador (o browser envia ?today=YYYY-MM-DD); se não vier, usa UTC. */
+const userToday = (url: URL) => {
+  const t = url.searchParams.get('today') || '';
+  return DATE_RE.test(t) ? t : today();
+};
 
 function rangeStart(range: string | null) {
   if (range === 'all') return '2000-01-01T00:00:00.000Z';
@@ -149,9 +165,18 @@ const signup: Handler = async ({ req, env }) => {
   return json({ ok: true });
 };
 
-const me: Handler = async ({ user, env }) => {
-  const pending = user.role === 'admin' ? (await env.DB.prepare(`SELECT COUNT(*) n FROM users WHERE status = 'pending'`).first<{ n: number }>())!.n : 0;
-  return { user, pendingUsers: pending };
+const me: Handler = async ({ user, env, url }) => {
+  const [p, t] = await env.DB.batch<{ n: number }>([
+    env.DB.prepare(`SELECT COUNT(*) n FROM users WHERE status = 'pending'`),
+    env.DB.prepare(`SELECT COUNT(*) n FROM tasks WHERE done_at IS NULL AND due_date <= ? AND (assignee_id = ? OR assignee_id IS NULL)`).bind(userToday(url), user.id),
+  ]);
+  return { user, pendingUsers: user.role === 'admin' ? p.results[0]?.n || 0 : 0, tasksDue: t.results[0]?.n || 0 };
+};
+
+/** Equipa ativa (para atribuir leads e tarefas). */
+const team: Handler = async ({ env }) => {
+  const { results } = await env.DB.prepare(`SELECT id, name, email, role FROM users WHERE status = 'active' ORDER BY name`).all();
+  return { users: results };
 };
 
 const updateMe: Handler = async ({ req, env, user }) => {
@@ -179,8 +204,9 @@ const changePassword: Handler = async ({ req, env, user }) => {
 /* Visão geral                                                            */
 /* ====================================================================== */
 
-const stats: Handler = async ({ env, url }) => {
+const stats: Handler = async ({ env, url, user }) => {
   const range = url.searchParams.get('range') || '30';
+  const tday = userToday(url);
   const from = rangeStart(range);
   const prev = prevRange(from);
   const db = env.DB;
@@ -203,11 +229,18 @@ const stats: Handler = async ({ env, url }) => {
     /* 9 */ q(`SELECT currency, COALESCE(SUM(amount_cents),0) total FROM transactions WHERE kind = 'income' AND status = 'pending' GROUP BY currency`),
     /* 10 */ q(`SELECT substr(date,1,7) m, kind, currency, COALESCE(SUM(amount_cents),0) total FROM transactions WHERE status = 'paid' AND date >= ? GROUP BY m, kind, currency`, financeFrom),
     /* 11 */ q(`SELECT id, created_at, source, stage, qualification, name, business, email, phone, summary, needs FROM leads ORDER BY created_at DESC LIMIT 8`),
-    /* 12 */ q(`SELECT id, name, business, stage, next_action_at, next_step, phone, email FROM leads WHERE next_action_at IS NOT NULL AND next_action_at <= ? AND stage NOT IN ('won','lost') ORDER BY next_action_at LIMIT 10`, today()),
+    /* 12 */ q(`SELECT t.id, t.title, t.type, t.due_date, t.due_time, t.lead_id, l.name lead_name, l.business lead_business FROM tasks t LEFT JOIN leads l ON l.id = t.lead_id
+               WHERE t.done_at IS NULL AND t.due_date <= ? AND (t.assignee_id = ? OR t.assignee_id IS NULL) ORDER BY t.due_date, t.due_time IS NULL, t.due_time LIMIT 8`, tday, user.id),
     /* 13 */ q(`SELECT currency, COALESCE(SUM(amount_cents),0) total FROM transactions WHERE kind = 'income' AND recurring = 1 AND date >= ? GROUP BY currency`, new Date(Date.now() - 31 * 864e5).toISOString().slice(0, 10)),
     /* 14 */ q(`SELECT kind, currency, COALESCE(SUM(amount_cents),0) total FROM transactions WHERE status = 'paid' AND date >= ? GROUP BY kind, currency`, monthStart),
     /* 15 */ q(`SELECT qualification q, COUNT(*) n FROM leads WHERE created_at >= ? GROUP BY q`, from),
     /* 16 */ q(`SELECT COUNT(*) n FROM users WHERE status = 'pending'`),
+    /* 17 */ q(`SELECT COUNT(*) n FROM leads WHERE stage = 'new'`),
+    /* 18 */ q(`SELECT a.id, a.created_at, a.type, a.content, a.lead_id, l.name lead_name, l.business lead_business, u.name user_name
+               FROM activities a JOIN leads l ON l.id = a.lead_id LEFT JOIN users u ON u.id = a.user_id ORDER BY a.created_at DESC, a.id DESC LIMIT 10`),
+    /* 19 */ q(`SELECT stage, probability, currency, value_cents FROM leads WHERE stage NOT IN ('won','lost') AND value_cents > 0`),
+    /* 20 */ q(`SELECT COUNT(*) n FROM leads WHERE stage IN ('won','lost') AND closed_at >= ?`, from),
+    /* 21 */ q(`SELECT COUNT(*) n FROM tasks WHERE done_at IS NULL AND due_date < ? AND (assignee_id = ? OR assignee_id IS NULL)`, tday, user.id),
   ]);
   const r = <T>(i: number) => (res[i].results || []) as T[];
 
@@ -239,6 +272,12 @@ const stats: Handler = async ({ env, url }) => {
   const monthSum = (kind: string) => Object.fromEntries(month.filter((x) => x.kind === kind).map((x) => [x.currency, x.total]));
 
   const wonCount = r<{ n: number }>(4)[0]?.n || 0;
+  const closedCount = r<{ n: number }>(20)[0]?.n || 0;
+  const weighted: Record<string, number> = {};
+  for (const l of r<{ stage: string; probability: number | null; currency: string; value_cents: number }>(19)) {
+    const p = l.probability ?? STAGE_PROB[l.stage] ?? 0;
+    weighted[l.currency] = (weighted[l.currency] || 0) + Math.round((l.value_cents * p) / 100);
+  }
   return {
     range,
     from,
@@ -251,8 +290,13 @@ const stats: Handler = async ({ env, url }) => {
       won: wonCount,
       wonValue: sumBy(r(5)),
       conversion: leadsTotal ? wonCount / leadsTotal : 0,
+      winRate: closedCount ? wonCount / closedCount : null,
       openValue,
+      weightedValue: weighted,
+      newCount: r<{ n: number }>(17)[0]?.n || 0,
     },
+    tasks: { due: r(12), overdue: r<{ n: number }>(21)[0]?.n || 0 },
+    activity: r(18),
     funnel,
     ava: {
       messages: evCount('chat_message', 'ava'),
@@ -276,7 +320,6 @@ const stats: Handler = async ({ env, url }) => {
       monthsFrom: financeFrom.slice(0, 7),
     },
     recentLeads: r(11),
-    followups: r(12),
   };
 };
 
@@ -284,52 +327,76 @@ const stats: Handler = async ({ env, url }) => {
 /* CRM                                                                    */
 /* ====================================================================== */
 
-const LIST_COLS = `id, created_at, updated_at, source, stage, qualification, name, email, phone, business, business_type, country, location,
-  services, value_cents, currency, next_action_at, next_step, summary, substr(needs,1,300) needs, language, tags, closed_at`;
+const LIST_COLS = `l.id, l.created_at, l.updated_at, l.source, l.stage, l.qualification, l.name, l.email, l.phone, l.business, l.business_type,
+  l.country, l.location, l.services, l.value_cents, l.currency, l.next_action_at, l.next_step, l.summary, substr(l.needs,1,300) needs, l.language,
+  l.tags, l.closed_at, l.owner_id, u.name owner_name, l.expected_close_at, l.probability,
+  (SELECT MAX(a.created_at) FROM activities a WHERE a.lead_id = l.id AND a.type IN (${HUMAN_ACTS})) last_activity_at,
+  (SELECT MAX(a.created_at) FROM activities a WHERE a.lead_id = l.id AND a.type = 'stage') stage_changed_at,
+  (SELECT COUNT(*) FROM tasks t WHERE t.lead_id = l.id AND t.done_at IS NULL) open_tasks`;
 
-const listLeads: Handler = async ({ env, url }) => {
+const listLeads: Handler = async ({ env, url, user }) => {
   const p = url.searchParams;
   const where: string[] = [];
   const binds: unknown[] = [];
   const stage = p.get('stage');
-  if (stage && STAGES.includes(stage as never)) { where.push('stage = ?'); binds.push(stage); }
-  if (p.get('open') === '1') where.push(`stage NOT IN ('won','lost')`);
+  if (stage && STAGES.includes(stage as never)) { where.push('l.stage = ?'); binds.push(stage); }
+  if (p.get('open') === '1') where.push(`l.stage NOT IN ('won','lost')`);
   const source = p.get('source');
-  if (source && SOURCES.includes(source as never)) { where.push('source = ?'); binds.push(source); }
+  if (source && SOURCES.includes(source as never)) { where.push('l.source = ?'); binds.push(source); }
   const qual = p.get('qualification');
-  if (qual && QUALS.includes(qual as never)) { where.push('qualification = ?'); binds.push(qual); }
+  if (qual && QUALS.includes(qual as never)) { where.push('l.qualification = ?'); binds.push(qual); }
+  const owner = p.get('owner');
+  if (owner === 'me') { where.push('l.owner_id = ?'); binds.push(user.id); }
+  else if (owner === 'none') where.push('l.owner_id IS NULL');
+  else if (owner && /^\d+$/.test(owner)) { where.push('l.owner_id = ?'); binds.push(Number(owner)); }
+  const tag = str(p.get('tag'), 40).replace(/[%_,]/g, '');
+  if (tag) { where.push(`(',' || REPLACE(COALESCE(l.tags,''), ', ', ',') || ',') LIKE ?`); binds.push(`%,${tag},%`); }
   const qs = str(p.get('q'), 100);
   if (qs) {
     const like = `%${qs.replace(/[%_]/g, '')}%`;
-    where.push('(name LIKE ? OR email LIKE ? OR business LIKE ? OR phone LIKE ? OR needs LIKE ? OR tags LIKE ?)');
+    where.push('(l.name LIKE ? OR l.email LIKE ? OR l.business LIKE ? OR l.phone LIKE ? OR l.needs LIKE ? OR l.tags LIKE ?)');
     binds.push(like, like, like, like, like, like);
   }
-  if (p.get('from') && DATE_RE.test(p.get('from')!)) { where.push('created_at >= ?'); binds.push(p.get('from')); }
+  if (p.get('from') && DATE_RE.test(p.get('from')!)) { where.push('l.created_at >= ?'); binds.push(p.get('from')); }
   const limit = Math.min(Number(p.get('limit')) || 500, 2000);
   const { results } = await env.DB
-    .prepare(`SELECT ${LIST_COLS} FROM leads ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY created_at DESC LIMIT ?`)
+    .prepare(`SELECT ${LIST_COLS} FROM leads l LEFT JOIN users u ON u.id = l.owner_id ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY l.created_at DESC LIMIT ?`)
     .bind(...binds, limit)
     .all();
   return { leads: results };
 };
 
+/** Todas as etiquetas em uso (para filtros e sugestões). */
+const listTags: Handler = async ({ env }) => {
+  const { results } = await env.DB.prepare(`SELECT tags FROM leads WHERE tags IS NOT NULL AND tags != ''`).all<{ tags: string }>();
+  const count: Record<string, number> = {};
+  for (const r of results) for (const t of splitTags(r.tags)) count[t] = (count[t] || 0) + 1;
+  return { tags: Object.entries(count).sort((a, b) => b[1] - a[1]).map(([name, n]) => ({ name, n })) };
+};
+
+const splitTags = (s: string | null | undefined) => [...new Set(String(s || '').split(',').map((t) => t.trim()).filter(Boolean))];
+const joinTags = (list: unknown[]) => [...new Set(list.map((t) => str(t, 40).replace(/,/g, ' ').trim()).filter(Boolean))].slice(0, 20).join(', ') || null;
+
 const getLead: Handler = async ({ env, params }) => {
   const id = intId(params[0]);
-  const lead = await env.DB.prepare('SELECT * FROM leads WHERE id = ?').bind(id).first();
+  const lead = await env.DB.prepare('SELECT l.*, u.name owner_name FROM leads l LEFT JOIN users u ON u.id = l.owner_id WHERE l.id = ?').bind(id).first();
   if (!lead) throw new HttpError(404, 'not_found');
-  const [acts, txs, evs] = await env.DB.batch([
+  const [acts, txs, evs, tks] = await env.DB.batch([
     env.DB.prepare('SELECT a.*, u.name user_name FROM activities a LEFT JOIN users u ON u.id = a.user_id WHERE a.lead_id = ? ORDER BY a.created_at DESC, a.id DESC LIMIT 200').bind(id),
     env.DB.prepare('SELECT * FROM transactions WHERE lead_id = ? ORDER BY date DESC').bind(id),
     env.DB.prepare(`SELECT id, created_at, type, source, ref, meta FROM events WHERE lead_id = ? AND type IN ('email_sent','email_failed','whatsapp_sent','form_submit','lead_created') ORDER BY created_at DESC LIMIT 100`).bind(id),
+    env.DB.prepare(`SELECT t.*, u.name assignee_name FROM tasks t LEFT JOIN users u ON u.id = t.assignee_id WHERE t.lead_id = ? ORDER BY t.done_at IS NOT NULL, t.due_date IS NULL, t.due_date, t.due_time, t.id DESC LIMIT 100`).bind(id),
   ]);
-  return { lead, activities: acts.results, transactions: txs.results, events: evs.results };
+  return { lead, activities: acts.results, transactions: txs.results, events: evs.results, tasks: tks.results };
 };
 
 function leadPatch(b: Record<string, any>) {
   const set: Record<string, unknown> = {};
   for (const f of [...LEAD_FIELDS, 'lost_reason'] as string[]) {
+    if (f === 'tags') continue;
     if (f in b) set[f] = str(b[f], ['needs', 'summary', 'current_situation'].includes(f) ? 8000 : 400) || null;
   }
+  if ('tags' in b) set.tags = Array.isArray(b.tags) ? joinTags(b.tags) : joinTags(splitTags(b.tags));
   if ('email' in set && set.email) {
     set.email = String(set.email).toLowerCase();
     if (!EMAIL_RE.test(String(set.email))) throw new HttpError(400, 'validation', 'E-mail inválido.');
@@ -351,10 +418,19 @@ function leadPatch(b: Record<string, any>) {
     if (!CURRENCIES.includes(b.currency)) throw new HttpError(400, 'validation', 'Moeda inválida.');
     set.currency = b.currency;
   }
-  if ('next_action_at' in b) {
-    if (b.next_action_at && !DATE_RE.test(b.next_action_at)) throw new HttpError(400, 'validation', 'Data inválida.');
-    set.next_action_at = b.next_action_at || null;
+  if ('expected_close_at' in b) {
+    if (b.expected_close_at && !DATE_RE.test(b.expected_close_at)) throw new HttpError(400, 'validation', 'Data de fecho inválida.');
+    set.expected_close_at = b.expected_close_at || null;
   }
+  if ('probability' in b) {
+    if (b.probability === null || b.probability === '') set.probability = null;
+    else {
+      const v = Math.round(Number(b.probability));
+      if (!Number.isFinite(v) || v < 0 || v > 100) throw new HttpError(400, 'validation', 'A probabilidade vai de 0 a 100.');
+      set.probability = v;
+    }
+  }
+  if ('owner_id' in b) set.owner_id = b.owner_id ? Number(b.owner_id) || null : null;
   if ('services' in b) {
     if (!Array.isArray(b.services)) throw new HttpError(400, 'validation', 'Serviços inválidos.');
     set.services = JSON.stringify(b.services.map((s: unknown) => str(s, 40)).filter(Boolean).slice(0, 10));
@@ -362,26 +438,63 @@ function leadPatch(b: Record<string, any>) {
   return set;
 }
 
+async function checkOwner(db: D1Database, ownerId: unknown) {
+  if (ownerId == null) return null;
+  const u = await db.prepare(`SELECT id, name FROM users WHERE id = ? AND status = 'active'`).bind(ownerId).first<{ id: number; name: string }>();
+  if (!u) throw new HttpError(400, 'validation', 'Responsável inválido.');
+  return u;
+}
+
+/** leads.next_action_at = data da próxima tarefa aberta (o resumo diário e o quadro usam-na). */
+async function syncNextAction(db: D1Database, leadId: number | null | undefined) {
+  if (!leadId) return;
+  await db
+    .prepare(`UPDATE leads SET next_action_at = (SELECT MIN(due_date) FROM tasks WHERE lead_id = ? AND done_at IS NULL AND due_date IS NOT NULL) WHERE id = ?`)
+    .bind(leadId, leadId)
+    .run();
+}
+
+async function insertTask(db: D1Database, t: { title: string; type?: string; due_date?: string | null; due_time?: string | null; lead_id?: number | null; assignee_id?: number | null; notes?: string | null; created_by?: number | null }) {
+  const row = await db
+    .prepare('INSERT INTO tasks (title, type, due_date, due_time, lead_id, assignee_id, notes, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id')
+    .bind(t.title, t.type || 'todo', t.due_date || null, t.due_time || null, t.lead_id ?? null, t.assignee_id ?? null, t.notes || null, t.created_by ?? null)
+    .first<{ id: number }>();
+  await syncNextAction(db, t.lead_id);
+  return row!.id;
+}
 
 const createLead: Handler = async ({ req, env, user }) => {
   const b = await readBody(req);
   const set = leadPatch(b);
   if (!set.name && !set.email && !set.phone && !set.business) throw new HttpError(400, 'validation', 'Preencha pelo menos o nome, e-mail, telefone ou negócio.');
+  if (!('owner_id' in b)) set.owner_id = user.id;
+  await checkOwner(env.DB, set.owner_id);
   const input: LeadInput = { ...(set as LeadInput), services: b.services, stage: set.stage as string | undefined };
-  const { id } = await saveLead(env.DB, input, { source: 'manual', userId: user.id, note: `Lead criado por ${user.name}.` });
+  const { id, created } = await saveLead(env.DB, input, { source: 'manual', userId: user.id, note: `Lead criado por ${user.name}.` });
   // saveLead não grava estes campos; aplica-os já.
-  const extra = Object.fromEntries(Object.entries(set).filter(([k]) => ['value_cents', 'currency', 'next_action_at', 'lost_reason', 'stage'].includes(k)));
+  const extra = Object.fromEntries(
+    Object.entries(set).filter(([k]) => ['value_cents', 'currency', 'lost_reason', 'stage', 'owner_id', 'expected_close_at', 'probability', 'tags'].includes(k)),
+  );
+  if (created && ['won', 'lost'].includes(set.stage as string)) extra.closed_at = now();
   if (Object.keys(extra).length) {
     await env.DB.prepare(`UPDATE leads SET ${Object.keys(extra).map((k) => `${k} = ?`).join(', ')} WHERE id = ?`).bind(...Object.values(extra), id).run();
   }
-  return { ok: true, id };
+  if (b.next_action_at && DATE_RE.test(b.next_action_at)) {
+    await insertTask(env.DB, { title: str(b.task_title, 200) || 'Primeiro contacto', type: 'call', due_date: b.next_action_at, lead_id: id, assignee_id: (set.owner_id as number) ?? user.id, created_by: user.id });
+  }
+  return { ok: true, id, created };
 };
 
 const updateLead: Handler = async ({ req, env, params, user }) => {
   const id = intId(params[0]);
-  const before = await env.DB.prepare('SELECT stage, value_cents, currency, next_action_at FROM leads WHERE id = ?').bind(id).first<{ stage: string; value_cents: number | null; currency: string; next_action_at: string | null }>();
+  const before = await env.DB
+    .prepare('SELECT stage, value_cents, currency, owner_id, expected_close_at, probability FROM leads WHERE id = ?')
+    .bind(id)
+    .first<{ stage: string; value_cents: number | null; currency: string; owner_id: number | null; expected_close_at: string | null; probability: number | null }>();
   if (!before) throw new HttpError(404, 'not_found');
-  const set = leadPatch(await readBody(req));
+  const b = await readBody(req);
+  const set = leadPatch(b);
+  const owner = 'owner_id' in set ? await checkOwner(env.DB, set.owner_id) : null;
   if (!Object.keys(set).length) return { ok: true };
   if (set.stage && set.stage !== before.stage) {
     set.closed_at = ['won', 'lost'].includes(set.stage as string) ? now() : null;
@@ -395,8 +508,11 @@ const updateLead: Handler = async ({ req, env, params, user }) => {
   if ('value_cents' in set && set.value_cents !== before.value_cents) {
     await addActivity(env.DB, id, 'update', `Valor do negócio: ${set.value_cents == null ? '—' : (Number(set.value_cents) / 100).toFixed(2) + ' ' + (set.currency || before.currency)}`, user.id);
   }
-  if ('next_action_at' in set && set.next_action_at !== before.next_action_at && set.next_action_at) {
-    await addActivity(env.DB, id, 'update', `Próxima ação marcada para ${set.next_action_at}.`, user.id);
+  if ('owner_id' in set && set.owner_id !== before.owner_id) {
+    await addActivity(env.DB, id, 'update', owner ? `Responsável: ${owner.name}` : 'Responsável removido', user.id);
+  }
+  if ('expected_close_at' in set && set.expected_close_at !== before.expected_close_at && set.expected_close_at) {
+    await addActivity(env.DB, id, 'update', `Fecho previsto para ${set.expected_close_at}.`, user.id);
   }
   return { ok: true };
 };
@@ -404,6 +520,69 @@ const updateLead: Handler = async ({ req, env, params, user }) => {
 const deleteLead: Handler = async ({ env, params }) => {
   await env.DB.prepare('DELETE FROM leads WHERE id = ?').bind(intId(params[0])).run();
   return { ok: true };
+};
+
+/** Ações em massa na lista: etapa, responsável, etiqueta, apagar. */
+const bulkLeads: Handler = async ({ req, env, user }) => {
+  const b = await readBody(req);
+  const ids: number[] = Array.isArray(b.ids) ? [...new Set(b.ids.map(Number).filter((n: number) => Number.isInteger(n) && n > 0))].slice(0, 500) as number[] : [];
+  if (!ids.length) throw new HttpError(400, 'validation', 'Nenhum lead selecionado.');
+  const marks = ids.map(() => '?').join(',');
+  const db = env.DB;
+  const t = now();
+  const stmts: D1PreparedStatement[] = [];
+  const act = (leadId: number, type: string, content: string) =>
+    db.prepare('INSERT INTO activities (lead_id, type, content, user_id) VALUES (?, ?, ?, ?)').bind(leadId, type, content, user.id);
+
+  if (b.action === 'delete') {
+    if (user.role !== 'admin') throw new HttpError(403, 'forbidden', 'Só administradores podem apagar leads.');
+    stmts.push(db.prepare(`DELETE FROM leads WHERE id IN (${marks})`).bind(...ids));
+  } else if (b.action === 'stage') {
+    if (!STAGES.includes(b.value)) throw new HttpError(400, 'validation', 'Etapa inválida.');
+    const { results } = await db.prepare(`SELECT id, stage FROM leads WHERE id IN (${marks})`).bind(...ids).all<{ id: number; stage: string }>();
+    const closed = ['won', 'lost'].includes(b.value) ? t : null;
+    for (const l of results) {
+      if (l.stage === b.value) continue;
+      stmts.push(db.prepare('UPDATE leads SET stage = ?, closed_at = ?, updated_at = ? WHERE id = ?').bind(b.value, closed, t, l.id));
+      stmts.push(act(l.id, 'stage', `Etapa: ${STAGE_LABEL[l.stage]} → ${STAGE_LABEL[b.value]} (em massa)`));
+    }
+  } else if (b.action === 'owner') {
+    const owner = await checkOwner(db, b.value ? Number(b.value) : null);
+    stmts.push(db.prepare(`UPDATE leads SET owner_id = ?, updated_at = ? WHERE id IN (${marks})`).bind(owner?.id ?? null, t, ...ids));
+    for (const id of ids) stmts.push(act(id, 'update', owner ? `Responsável: ${owner.name}` : 'Responsável removido'));
+  } else if (b.action === 'tag' || b.action === 'untag') {
+    const tag = str(b.value, 40).replace(/,/g, ' ').trim();
+    if (!tag) throw new HttpError(400, 'validation', 'Escreva a etiqueta.');
+    const { results } = await db.prepare(`SELECT id, tags FROM leads WHERE id IN (${marks})`).bind(...ids).all<{ id: number; tags: string | null }>();
+    for (const l of results) {
+      const cur = splitTags(l.tags);
+      const next = b.action === 'tag' ? [...cur, tag] : cur.filter((x) => x.toLowerCase() !== tag.toLowerCase());
+      stmts.push(db.prepare('UPDATE leads SET tags = ?, updated_at = ? WHERE id = ?').bind(joinTags(next), t, l.id));
+    }
+  } else throw new HttpError(400, 'validation', 'Ação inválida.');
+
+  for (let i = 0; i < stmts.length; i += 50) await db.batch(stmts.slice(i, i + 50));
+  return { ok: true, count: ids.length };
+};
+
+/** Importação de CSV (o browser lê o ficheiro e envia em blocos pequenos). Não duplica e-mails com negócio aberto. */
+const importLeads: Handler = async ({ req, env, user }) => {
+  const b = await readBody(req);
+  const rows: Record<string, any>[] = Array.isArray(b.rows) ? b.rows.slice(0, 10) : [];
+  const ownerId = b.owner_id ? (await checkOwner(env.DB, Number(b.owner_id)))!.id : null;
+  let created = 0, updated = 0, skipped = 0;
+  for (const r of rows) {
+    const { stage, owner_id: _o, ...rest } = r;
+    const set = (() => { try { return leadPatch(STAGES.includes(stage) ? { ...rest, stage } : rest); } catch { return null; } })();
+    if (!set || (!set.name && !set.email && !set.phone && !set.business)) { skipped++; continue; }
+    const res = await saveLead(env.DB, { ...(set as LeadInput), stage: set.stage as string | undefined }, { source: 'manual', userId: user.id, note: `Importado de CSV por ${user.name}.` });
+    res.created ? created++ : updated++;
+    const extra: Record<string, unknown> = {};
+    for (const k of ['value_cents', 'currency', 'tags', 'expected_close_at']) if (set[k] != null) extra[k] = set[k];
+    if (ownerId) extra.owner_id = ownerId;
+    if (Object.keys(extra).length) await env.DB.prepare(`UPDATE leads SET ${Object.keys(extra).map((k) => `${k} = ?`).join(', ')} WHERE id = ?`).bind(...Object.values(extra), res.id).run();
+  }
+  return { ok: true, created, updated, skipped };
 };
 
 const addLeadActivity: Handler = async ({ req, env, params, user }) => {
@@ -438,6 +617,180 @@ const deleteActivity: Handler = async ({ env, params, user }) => {
   return { ok: true };
 };
 
+/* ====================================================================== */
+/* Tarefas                                                                */
+/* ====================================================================== */
+
+function taskPatch(b: Record<string, any>, partial = false) {
+  const set: Record<string, unknown> = {};
+  if (!partial || 'title' in b) {
+    const title = str(b.title, 200);
+    if (!title) throw new HttpError(400, 'validation', 'Escreva a tarefa.');
+    set.title = title;
+  }
+  if (!partial || 'type' in b) set.type = TASK_TYPES.includes(b.type) ? b.type : 'todo';
+  if (!partial || 'due_date' in b) {
+    if (b.due_date && !DATE_RE.test(b.due_date)) throw new HttpError(400, 'validation', 'Data inválida.');
+    set.due_date = b.due_date || null;
+  }
+  if (!partial || 'due_time' in b) {
+    if (b.due_time && !TIME_RE.test(b.due_time)) throw new HttpError(400, 'validation', 'Hora inválida.');
+    set.due_time = b.due_time || null;
+  }
+  if (!partial || 'notes' in b) set.notes = str(b.notes, 4000) || null;
+  if (!partial || 'lead_id' in b) set.lead_id = b.lead_id ? Number(b.lead_id) || null : null;
+  if ('assignee_id' in b) set.assignee_id = b.assignee_id ? Number(b.assignee_id) || null : null;
+  return set;
+}
+
+const listTasks: Handler = async ({ env, url, user }) => {
+  const p = url.searchParams;
+  const where: string[] = [];
+  const binds: unknown[] = [];
+  const done = p.get('done') === '1';
+  where.push(done ? 't.done_at IS NOT NULL' : 't.done_at IS NULL');
+  const who = p.get('assignee') || 'me';
+  if (who === 'me') { where.push('(t.assignee_id = ? OR t.assignee_id IS NULL)'); binds.push(user.id); }
+  else if (/^\d+$/.test(who)) { where.push('t.assignee_id = ?'); binds.push(Number(who)); }
+  if (p.get('lead') && /^\d+$/.test(p.get('lead')!)) { where.push('t.lead_id = ?'); binds.push(Number(p.get('lead'))); }
+  const order = done ? 't.done_at DESC' : 't.due_date IS NULL, t.due_date, t.due_time IS NULL, t.due_time, t.id';
+  const { results } = await env.DB
+    .prepare(
+      `SELECT t.*, u.name assignee_name, l.name lead_name, l.business lead_business, l.phone lead_phone, l.email lead_email, l.stage lead_stage
+       FROM tasks t LEFT JOIN users u ON u.id = t.assignee_id LEFT JOIN leads l ON l.id = t.lead_id
+       WHERE ${where.join(' AND ')} ORDER BY ${order} LIMIT ${done ? 100 : 1000}`,
+    )
+    .bind(...binds)
+    .all();
+  // Leads novos que ainda ninguém contactou nem têm tarefa (para não ficarem esquecidos).
+  const uncontacted = done ? [] : (await env.DB
+    .prepare(
+      `SELECT l.id, l.created_at, l.name, l.business, l.source, l.qualification, l.phone, l.email, l.summary FROM leads l
+       WHERE l.stage = 'new' AND NOT EXISTS (SELECT 1 FROM tasks t WHERE t.lead_id = l.id AND t.done_at IS NULL)
+       ORDER BY l.created_at DESC LIMIT 20`,
+    )
+    .all()).results;
+  return { tasks: results, uncontacted };
+};
+
+const createTask: Handler = async ({ req, env, user }) => {
+  const b = await readBody(req);
+  const set = taskPatch(b);
+  if (!('assignee_id' in set)) set.assignee_id = user.id;
+  if (set.assignee_id) await checkOwner(env.DB, set.assignee_id);
+  if (set.lead_id && !(await env.DB.prepare('SELECT id FROM leads WHERE id = ?').bind(set.lead_id).first())) throw new HttpError(400, 'validation', 'Lead inválido.');
+  const id = await insertTask(env.DB, { ...(set as any), created_by: user.id });
+  return { ok: true, id };
+};
+
+const updateTask: Handler = async ({ req, env, params, user }) => {
+  const id = intId(params[0]);
+  const before = await env.DB.prepare('SELECT * FROM tasks WHERE id = ?').bind(id).first<{ id: number; title: string; lead_id: number | null; done_at: string | null; type: string }>();
+  if (!before) throw new HttpError(404, 'not_found');
+  const b = await readBody(req);
+  const set = taskPatch(b, true);
+  if (set.assignee_id) await checkOwner(env.DB, set.assignee_id);
+  if ('done' in b) set.done_at = b.done ? before.done_at || now() : null;
+  if (Object.keys(set).length) {
+    await env.DB.prepare(`UPDATE tasks SET ${Object.keys(set).map((k) => `${k} = ?`).join(', ')} WHERE id = ?`).bind(...Object.values(set), id).run();
+  }
+  const leadId = (('lead_id' in set ? set.lead_id : before.lead_id) as number | null) ?? null;
+  if (b.done && !before.done_at && leadId) {
+    await addActivity(env.DB, leadId, 'task', `Tarefa concluída: ${set.title || before.title}${b.outcome ? `\n${str(b.outcome, 4000)}` : ''}`, user.id);
+    await env.DB.prepare('UPDATE leads SET updated_at = ? WHERE id = ?').bind(now(), leadId).run();
+  }
+  await syncNextAction(env.DB, leadId);
+  if (before.lead_id && before.lead_id !== leadId) await syncNextAction(env.DB, before.lead_id);
+  return { ok: true };
+};
+
+const deleteTask: Handler = async ({ env, params }) => {
+  const id = intId(params[0]);
+  const t = await env.DB.prepare('SELECT lead_id FROM tasks WHERE id = ?').bind(id).first<{ lead_id: number | null }>();
+  await env.DB.prepare('DELETE FROM tasks WHERE id = ?').bind(id).run();
+  await syncNextAction(env.DB, t?.lead_id);
+  return { ok: true };
+};
+
+/* ====================================================================== */
+/* Modelos de mensagem                                                    */
+/* ====================================================================== */
+
+function templatePatch(b: Record<string, any>) {
+  const name = str(b.name, 80);
+  const body = str(b.body, 4000);
+  if (!name) throw new HttpError(400, 'validation', 'Dê um nome ao modelo.');
+  if (!body) throw new HttpError(400, 'validation', 'Escreva a mensagem.');
+  return { name, body, channel: TEMPLATE_CHANNELS.includes(b.channel) ? b.channel : 'any', subject: str(b.subject, 200) || null };
+}
+
+const listTemplates: Handler = async ({ env }) => {
+  const { results } = await env.DB.prepare('SELECT t.*, u.name user_name FROM templates t LEFT JOIN users u ON u.id = t.user_id ORDER BY t.name').all();
+  return { templates: results };
+};
+const createTemplate: Handler = async ({ req, env, user }) => {
+  const s = templatePatch(await readBody(req));
+  const r = await env.DB.prepare('INSERT INTO templates (name, channel, subject, body, user_id) VALUES (?, ?, ?, ?, ?) RETURNING id').bind(s.name, s.channel, s.subject, s.body, user.id).first<{ id: number }>();
+  return { ok: true, id: r!.id };
+};
+const updateTemplate: Handler = async ({ req, env, params }) => {
+  const s = templatePatch(await readBody(req));
+  const r = await env.DB.prepare('UPDATE templates SET name = ?, channel = ?, subject = ?, body = ? WHERE id = ?').bind(s.name, s.channel, s.subject, s.body, intId(params[0])).run();
+  if (!r.meta.changes) throw new HttpError(404, 'not_found');
+  return { ok: true };
+};
+const deleteTemplate: Handler = async ({ env, params }) => {
+  await env.DB.prepare('DELETE FROM templates WHERE id = ?').bind(intId(params[0])).run();
+  return { ok: true };
+};
+
+/* ====================================================================== */
+/* Relatórios                                                             */
+/* ====================================================================== */
+
+const reports: Handler = async ({ env, url }) => {
+  const range = url.searchParams.get('range') || '90';
+  const from = rangeStart(range);
+  const yearAgo = new Date();
+  yearAgo.setUTCMonth(yearAgo.getUTCMonth() - 11, 1);
+  const monthsFrom = yearAgo.toISOString().slice(0, 7);
+  const db = env.DB;
+  const q = (sql: string, ...b: unknown[]) => db.prepare(sql).bind(...b);
+  const res = await db.batch([
+    /* 0 closed by source */ q(`SELECT source, stage, COUNT(*) n FROM leads WHERE stage IN ('won','lost') AND closed_at >= ? GROUP BY source, stage`, from),
+    /* 1 lost reasons */ q(`SELECT lost_reason FROM leads WHERE stage = 'lost' AND closed_at >= ?`, from),
+    /* 2 time to close */ q(`SELECT AVG(julianday(closed_at) - julianday(created_at)) d, COUNT(*) n FROM leads WHERE stage = 'won' AND closed_at >= ?`, from),
+    /* 3 won per month */ q(`SELECT substr(closed_at,1,7) m, currency, COUNT(*) n, COALESCE(SUM(value_cents),0) total FROM leads WHERE stage = 'won' AND closed_at >= ? GROUP BY m, currency`, monthsFrom + '-01'),
+    /* 4 open deals */ q(`SELECT id, name, business, stage, probability, value_cents, currency, expected_close_at FROM leads WHERE stage NOT IN ('won','lost')`),
+    /* 5 by owner */ q(`SELECT l.owner_id, u.name owner_name, l.stage, COUNT(*) n, l.currency, COALESCE(SUM(l.value_cents),0) total FROM leads l LEFT JOIN users u ON u.id = l.owner_id
+                        WHERE (l.stage IN ('won','lost') AND l.closed_at >= ?) OR l.stage NOT IN ('won','lost') GROUP BY l.owner_id, l.stage, l.currency`, from),
+    /* 6 activities by user */ q(`SELECT a.user_id, u.name user_name, a.type, COUNT(*) n FROM activities a LEFT JOIN users u ON u.id = a.user_id
+                        WHERE a.created_at >= ? AND a.type IN (${HUMAN_ACTS}) GROUP BY a.user_id, a.type`, from),
+    /* 7 first response */ q(`SELECT AVG(julianday(f) - julianday(c)) d, COUNT(*) n FROM (SELECT l.created_at c, (SELECT MIN(a.created_at) FROM activities a WHERE a.lead_id = l.id AND a.type IN ('call','email','whatsapp','meeting','task')) f FROM leads l WHERE l.created_at >= ?) WHERE f IS NOT NULL`, from),
+    /* 8 services */ q(`SELECT services, stage FROM leads WHERE created_at >= ? AND services IS NOT NULL`, from),
+    /* 9 created in range */ q(`SELECT COUNT(*) n FROM leads WHERE created_at >= ?`, from),
+    /* 10 won value in range */ q(`SELECT currency, COUNT(*) n, COALESCE(SUM(value_cents),0) total FROM leads WHERE stage = 'won' AND closed_at >= ? GROUP BY currency`, from),
+  ]);
+  const r = <T>(i: number) => (res[i].results || []) as T[];
+  return {
+    range,
+    from,
+    monthsFrom,
+    closedBySource: r(0),
+    lostReasons: r<{ lost_reason: string | null }>(1).map((x) => x.lost_reason),
+    timeToClose: r(2)[0] || { d: null, n: 0 },
+    wonMonthly: r(3),
+    open: r(4),
+    byOwner: r(5),
+    activitiesByUser: r(6),
+    firstResponse: r(7)[0] || { d: null, n: 0 },
+    services: r(8),
+    created: r<{ n: number }>(9)[0]?.n || 0,
+    wonValue: r(10),
+    stageProb: STAGE_PROB,
+  };
+};
+
 /* ---------- CSV ---------- */
 function csv(rows: Record<string, unknown>[], cols: string[], name: string) {
   const cell = (v: unknown) => {
@@ -452,8 +805,8 @@ function csv(rows: Record<string, unknown>[], cols: string[], name: string) {
 }
 
 const exportLeads: Handler = async ({ env }) => {
-  const { results } = await env.DB.prepare('SELECT * FROM leads ORDER BY created_at DESC').all();
-  const cols = ['id', 'created_at', 'source', 'stage', 'qualification', 'name', 'email', 'phone', 'business', 'business_type', 'country', 'location', 'language', 'services', 'needs', 'timeline', 'budget', 'decision_maker', 'summary', 'next_step', 'value_cents', 'currency', 'next_action_at', 'lost_reason', 'tags', 'page'];
+  const { results } = await env.DB.prepare('SELECT l.*, u.name owner_name, ROUND(l.value_cents / 100.0, 2) value FROM leads l LEFT JOIN users u ON u.id = l.owner_id ORDER BY l.created_at DESC').all();
+  const cols = ['id', 'created_at', 'source', 'stage', 'qualification', 'owner_name', 'name', 'email', 'phone', 'business', 'business_type', 'country', 'location', 'language', 'services', 'needs', 'timeline', 'budget', 'decision_maker', 'summary', 'next_step', 'value', 'currency', 'probability', 'expected_close_at', 'next_action_at', 'lost_reason', 'tags', 'page'];
   return csv(results as Record<string, unknown>[], cols, 'leads');
 };
 
@@ -834,11 +1187,24 @@ const routes: [string, RegExp, Handler, Access][] = [
   ['POST', /^\/api\/auth\/logout$/, logout, 'public'],
   ['POST', /^\/api\/auth\/signup$/, signup, 'public'],
   ['GET', /^\/api\/me$/, me, 'user'],
+  ['GET', /^\/api\/team$/, team, 'user'],
   ['PATCH', /^\/api\/me$/, updateMe, 'user'],
   ['POST', /^\/api\/me\/password$/, changePassword, 'user'],
   ['GET', /^\/api\/stats$/, stats, 'user'],
   ['GET', /^\/api\/leads$/, listLeads, 'user'],
   ['POST', /^\/api\/leads$/, createLead, 'user'],
+  ['POST', /^\/api\/leads\/bulk$/, bulkLeads, 'user'],
+  ['POST', /^\/api\/leads\/import$/, importLeads, 'user'],
+  ['GET', /^\/api\/tags$/, listTags, 'user'],
+  ['GET', /^\/api\/tasks$/, listTasks, 'user'],
+  ['POST', /^\/api\/tasks$/, createTask, 'user'],
+  ['PATCH', /^\/api\/tasks\/(\d+)$/, updateTask, 'user'],
+  ['DELETE', /^\/api\/tasks\/(\d+)$/, deleteTask, 'user'],
+  ['GET', /^\/api\/templates$/, listTemplates, 'user'],
+  ['POST', /^\/api\/templates$/, createTemplate, 'user'],
+  ['PATCH', /^\/api\/templates\/(\d+)$/, updateTemplate, 'user'],
+  ['DELETE', /^\/api\/templates\/(\d+)$/, deleteTemplate, 'user'],
+  ['GET', /^\/api\/reports$/, reports, 'user'],
   ['GET', /^\/api\/leads\/(\d+)$/, getLead, 'user'],
   ['PATCH', /^\/api\/leads\/(\d+)$/, updateLead, 'user'],
   ['DELETE', /^\/api\/leads\/(\d+)$/, deleteLead, 'admin'],

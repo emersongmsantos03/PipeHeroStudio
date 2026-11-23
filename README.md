@@ -109,8 +109,14 @@ Sem estas duas variáveis, o aviso por WhatsApp fica desligado. Os leads do chat
 
 Um segundo Worker (`admin/`, nome `pipehero-admin`) com login. Partilha com o site a base de dados D1 `pipehero-crm`.
 
-- **Visão geral:** leads por origem, conversas da Ava, e-mails enviados, funil, follow-ups, receita, lucro, a receber, recorrente.
-- **CRM:** quadro por etapas (arrastar e soltar), lista com filtros e exportação CSV, ficha do lead com notas, contactos, próxima ação, conversa da Ava e pagamentos.
+- **Visão geral:** a sua agenda do dia, leads por origem, conversas da Ava, funil, pipeline ponderado, receita, lucro, a receber e atividade recente da equipa.
+- **Tarefas:** follow-ups, chamadas, e-mails, WhatsApp e reuniões com data, hora e responsável, agrupadas por prazo (atrasadas, hoje, amanhã…). Leads novos sem tarefa aparecem à parte para não ficarem esquecidos. A contagem do dia aparece no menu.
+- **Pipeline:** quadro por etapas (arrastar e soltar) com responsável, próxima tarefa, etiquetas, aviso de lead parado há 7+ dias e valor ponderado por coluna.
+- **Leads:** vistas rápidas (os meus, em aberto, quentes, sem responsável, parados, ganhos), filtros por responsável/etapa/origem/etiqueta, ordenação por coluna, ações em massa (etapa, responsável, etiqueta, apagar), importação e exportação CSV.
+- **Ficha do lead:** etapas em pipeline, negócio (valor, probabilidade, fecho previsto, responsável, etiquetas), tarefas, histórico com notas e contactos, conversa da Ava, pagamentos e botão **Mensagem** com modelos para WhatsApp/e-mail (fica registado no histórico).
+- **Relatórios:** taxa de ganho (geral e por origem), ticket médio, tempo até fechar, tempo de resposta, previsão de fecho por mês, motivos de perda, serviços mais pedidos e desempenho por pessoa.
+- **Modelos de mensagem:** textos com variáveis `{primeiro_nome}`, `{nome}`, `{negocio}`, `{meu_nome}`.
+- **Pesquisa global:** `⌘K` / `Ctrl+K` (ou `/`) procura leads, páginas e ações. Atalhos: `N` novo lead, `T` nova tarefa.
 - **Financeiro:** receitas e despesas, pendentes, recorrentes, categorias. Marcar um lead como “Ganho” pode lançar a receita sozinho.
 - **Ava e agentes:** conversas, conversão, páginas, registo de todos os e-mails enviados (Ava, formulário, agentes externos, avisos).
 - **Integrações (admin):** chave da API para agentes externos, prompt pronto para configurar o agente, e-mail de teste, resumo diário.
@@ -131,6 +137,8 @@ npm run deploy:admin   # publica o painel (o push para main só publica o site)
 npm run deploy:all     # site + painel
 npm run db:migrate     # aplica migrations/ na base de dados de produção
 ```
+
+Ao publicar uma versão com migração nova (ex.: `0002_crm_plus.sql` — tarefas, responsáveis, previsão e modelos), corra primeiro `npm run db:migrate` e só depois `npm run deploy:admin`. A migração só acrescenta tabelas e colunas; o site continua a funcionar igual.
 
 Resumo diário: cron às 08:00 UTC (`admin/wrangler.jsonc`), só sai se houver novidades. Liga e desliga em Integrações.
 

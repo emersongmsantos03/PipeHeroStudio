@@ -38,7 +38,11 @@ export async function sendDigest(env: AppEnv, { force }: { force: boolean }) {
     db.prepare(`SELECT id, name, business, source, qualification, summary, needs FROM leads WHERE created_at >= ? AND created_at < ? ORDER BY created_at`).bind(s, e),
     db.prepare(`SELECT COUNT(DISTINCT ref) n, COUNT(*) m FROM events WHERE type = 'chat_message' AND created_at >= ? AND created_at < ?`).bind(s, e),
     db.prepare(`SELECT source, COUNT(*) n FROM events WHERE type = 'email_sent' AND created_at >= ? AND created_at < ? GROUP BY source`).bind(s, e),
-    db.prepare(`SELECT id, name, business, stage, next_action_at, next_step FROM leads WHERE next_action_at IS NOT NULL AND next_action_at <= ? AND stage NOT IN ('won','lost') ORDER BY next_action_at LIMIT 20`).bind(today),
+    db.prepare(
+      `SELECT t.lead_id id, t.title, t.due_date next_action_at, t.due_time, l.name, l.business, l.stage, u.name assignee FROM tasks t
+       LEFT JOIN leads l ON l.id = t.lead_id LEFT JOIN users u ON u.id = t.assignee_id
+       WHERE t.done_at IS NULL AND t.due_date <= ? ORDER BY t.due_date, t.due_time IS NULL, t.due_time LIMIT 20`,
+    ).bind(today),
     db.prepare(`SELECT name, email FROM users WHERE status = 'pending'`),
     db.prepare(`SELECT currency, SUM(amount_cents) total FROM transactions WHERE kind = 'income' AND status = 'paid' AND date >= ? GROUP BY currency`).bind(monthStart),
     db.prepare(`SELECT currency, SUM(amount_cents) total FROM transactions WHERE kind = 'expense' AND status = 'paid' AND date >= ? GROUP BY currency`).bind(monthStart),
@@ -47,7 +51,7 @@ export async function sendDigest(env: AppEnv, { force }: { force: boolean }) {
   const L = leads.results as { id: number; name: string; business: string; source: string; qualification: string | null; summary: string | null; needs: string | null }[];
   const C = convs.results[0] as { n: number; m: number };
   const E = emails.results as { source: string; n: number }[];
-  const F = followups.results as { id: number; name: string; business: string; stage: string; next_action_at: string; next_step: string | null }[];
+  const F = followups.results as { id: number | null; title: string; name: string | null; business: string | null; stage: string | null; next_action_at: string; due_time: string | null; assignee: string | null }[];
   const P = pending.results as { name: string; email: string }[];
 
   if (!force && !L.length && !C.n && !F.length && !P.length) return { sent: false, skipped: 'nothing' };
@@ -60,28 +64,28 @@ export async function sendDigest(env: AppEnv, { force }: { force: boolean }) {
 
   const body =
     `<p style="color:#4a556b;margin-top:0">Ontem, ${start.toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })}.</p>` +
-    `<table cellspacing="6" style="width:100%;border-collapse:separate"><tr>${tile('Novos leads', String(L.length))}${tile('Conversas Ava', String(C.n))}${tile('E-mails enviados', String(emailTotal))}${tile('Follow-ups', String(F.length))}</tr></table>` +
+    `<table cellspacing="6" style="width:100%;border-collapse:separate"><tr>${tile('Novos leads', String(L.length))}${tile('Conversas Ava', String(C.n))}${tile('E-mails enviados', String(emailTotal))}${tile('Tarefas', String(F.length))}</tr></table>` +
     (L.length
       ? `<h2 style="font-size:15px;margin:18px 0 6px">Novos leads</h2><ul style="padding-left:18px;margin:0">${L.map(
           (l) => `<li style="margin-bottom:6px"><a href="${ADMIN_URL}/#/leads/${l.id}" style="color:#10182b;font-weight:600">${escHtml(l.name || 'Sem nome')}</a>${l.business ? ` — ${escHtml(l.business)}` : ''} <span style="color:#4a556b">(${src[l.source] || l.source}${l.qualification ? ', ' + l.qualification : ''})</span><br><span style="color:#4a556b">${escHtml((l.summary || l.needs || '').slice(0, 160))}</span></li>`,
         ).join('')}</ul>`
       : '') +
     (F.length
-      ? `<h2 style="font-size:15px;margin:18px 0 6px">Para fazer hoje</h2><ul style="padding-left:18px;margin:0">${F.map(
-          (f) => `<li style="margin-bottom:6px"><a href="${ADMIN_URL}/#/leads/${f.id}" style="color:#10182b;font-weight:600">${escHtml(f.name || f.business || 'Lead')}</a> · ${STAGE_LABEL[f.stage]}${f.next_action_at < today ? ' <strong style="color:#b42318">(atrasado)</strong>' : ''}${f.next_step ? `<br><span style="color:#4a556b">${escHtml(f.next_step)}</span>` : ''}</li>`,
+      ? `<h2 style="font-size:15px;margin:18px 0 6px">Tarefas para hoje</h2><ul style="padding-left:18px;margin:0">${F.map(
+          (f) => `<li style="margin-bottom:6px"><a href="${ADMIN_URL}/#/${f.id ? `leads/${f.id}` : 'tasks'}" style="color:#10182b;font-weight:600">${escHtml(f.title)}</a>${f.due_time ? ` às ${f.due_time}` : ''}${f.next_action_at < today ? ' <strong style="color:#b42318">(atrasada)</strong>' : ''}${f.id ? `<br><span style="color:#4a556b">${escHtml(f.name || f.business || 'Lead')}${f.stage ? ' · ' + STAGE_LABEL[f.stage] : ''}${f.assignee ? ' · ' + escHtml(f.assignee) : ''}</span>` : ''}</li>`,
         ).join('')}</ul>`
       : '') +
     (P.length ? `<h2 style="font-size:15px;margin:18px 0 6px">Cadastros à espera de aprovação</h2><p style="margin:0">${P.map((p) => `${escHtml(p.name)} (${escHtml(p.email)})`).join(', ')} — <a href="${ADMIN_URL}/#/users">aprovar</a></p>` : '') +
     `<h2 style="font-size:15px;margin:18px 0 6px">Este mês</h2><p style="margin:0">Receita: <strong>${moneyMulti(income.results as any)}</strong> · Despesas: <strong>${moneyMulti(expense.results as any)}</strong> · A receber: <strong>${moneyMulti(receivable.results as any)}</strong></p>` +
-    `<p style="color:#4a556b;font-size:12px;margin-top:16px">Ava: ${C.m} mensagens, ${ava} e-mails enviados. Pode desligar este resumo em Configurações.</p>`;
+    `<p style="color:#4a556b;font-size:12px;margin-top:16px">Ava: ${C.m} mensagens, ${ava} e-mails enviados. Pode desligar este resumo em Integrações.</p>`;
 
   const sent = await sendMail(
     env,
     {
       to: notifyTo(env),
       from: FROM,
-      subject: `Resumo do dia: ${L.length} lead${L.length === 1 ? '' : 's'}, ${C.n} conversa${C.n === 1 ? '' : 's'}${F.length ? `, ${F.length} follow-up${F.length === 1 ? '' : 's'}` : ''}`,
-      text: `Novos leads: ${L.length}\nConversas da Ava: ${C.n}\nE-mails enviados: ${emailTotal}\nFollow-ups para hoje: ${F.length}\n\n${L.map((l) => `- ${l.name} (${src[l.source]}): ${ADMIN_URL}/#/leads/${l.id}`).join('\n')}\n\n${ADMIN_URL}`,
+      subject: `Resumo do dia: ${L.length} lead${L.length === 1 ? '' : 's'}, ${C.n} conversa${C.n === 1 ? '' : 's'}${F.length ? `, ${F.length} tarefa${F.length === 1 ? '' : 's'}` : ''}`,
+      text: `Novos leads: ${L.length}\nConversas da Ava: ${C.n}\nE-mails enviados: ${emailTotal}\nTarefas para hoje: ${F.length}\n\n${L.map((l) => `- ${l.name} (${src[l.source]}): ${ADMIN_URL}/#/leads/${l.id}`).join('\n')}\n\n${ADMIN_URL}`,
       html: emailLayout('Resumo do dia', body, { label: 'Abrir o painel', href: ADMIN_URL }),
     },
     { source: 'system', kind: 'digest' },
