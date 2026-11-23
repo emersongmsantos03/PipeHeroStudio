@@ -14,6 +14,9 @@
  *  /api/users        utilizadores (admin)
  *  /api/settings     chave da API, resumo diário, e-mail de teste, importação (admin)
  *  /api/ingest/*     API para agentes externos (n8n, Make, GPT…) com chave Bearer
+ *  /api/prospects    lista de prospecção (todos os negócios do prospector, "não contatar")
+ *  /api/assistant    aba Assistente (fila de perguntas para o agente Qwen no PC)
+ *  /api/bridge/*     usado só pelo agente no PC (chave ASSISTANT_KEY): fila, consulta só-leitura e CRUD
  *  cron              resumo diário por e-mail
  */
 import { createSession, destroySession, getUser, hashPassword, randomToken, sha256, verifyPassword, weakPassword, type User } from './auth';
@@ -43,7 +46,7 @@ class HttpError extends Error {
 
 type Ctx = { req: Request; env: AppEnv; url: URL; user: User; params: string[]; ctx: ExecutionContext };
 type Handler = (c: Ctx) => Promise<Response | unknown>;
-type Access = 'public' | 'user' | 'admin' | 'ingest';
+type Access = 'public' | 'user' | 'admin' | 'ingest' | 'assistant';
 
 const SECURITY_HEADERS = {
   'Cache-Control': 'no-store',
@@ -1161,6 +1164,7 @@ const ingestEvent: Handler = async ({ req, env }) => {
       summary: str(e.summary || e.body_preview, 500) || null,
       kind: str(e.kind, 40) || null,
       status: str(e.status, 40) || null,
+      token: str(e.token, 40) || null,
     };
     await logEvent(env.DB, type, 'agent', { ref: str(e.to || e.lead_email || e.ref, 200) || null, leadId, meta, at: e.at && !isNaN(Date.parse(e.at)) ? new Date(e.at).toISOString() : undefined });
     if (leadId) {
@@ -1176,6 +1180,279 @@ const ingestEvent: Handler = async ({ req, env }) => {
     out.push({ type, lead_id: leadId });
   }
   return json({ ok: true, recorded: out.length, events: out }, 201);
+};
+
+
+/* ====================================================================== */
+/* Assistente interno (agente Qwen no PC do Emerson)                      */
+/* ====================================================================== */
+// A aba "Assistente" grava a pergunta numa fila; o agente no PC busca a fila com a chave ASSISTANT_KEY,
+// consulta os dados (só leitura), faz CRUD e devolve a resposta. Nada do PC fica exposto à internet.
+
+async function checkAssistant(req: Request, env: AppEnv) {
+  const auth = req.headers.get('Authorization') || '';
+  const given = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
+  const key = env.ASSISTANT_KEY || '';
+  if (!key || !given) throw new HttpError(401, 'unauthorized', 'Falta a chave do assistente.');
+  const a = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(given)));
+  const b = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(key)));
+  if (!crypto.subtle.timingSafeEqual(a, b)) throw new HttpError(401, 'unauthorized', 'Chave do assistente inválida.');
+}
+
+const ASSIST_TABLES_BLOCKED = /\b(users|sessions|settings|sqlite_\w+|password_hash|token_hash)\b/i;
+const ASSIST_WRITE = /\b(insert|update|delete|drop|alter|create|replace|attach|detach|pragma|vacuum|reindex|trigger|begin|commit)\b/i;
+
+/** Consulta só de leitura feita pelo agente (SELECT/WITH), sem tabelas de login. */
+const assistantQuery: Handler = async ({ req, env }) => {
+  const b = await readBody(req);
+  let sql = String(b.sql ?? '').replace(/--[^\n]*/g, ' ').replace(/\/\*[\s\S]*?\*\//g, ' ').trim().replace(/;\s*$/, '');
+  if (!/^(select|with)\b/i.test(sql)) throw new HttpError(400, 'only_select', 'Só consultas SELECT.');
+  if (sql.includes(';')) throw new HttpError(400, 'one_statement', 'Uma consulta de cada vez.');
+  if (ASSIST_WRITE.test(sql)) throw new HttpError(400, 'read_only', 'Consulta só de leitura.');
+  if (ASSIST_TABLES_BLOCKED.test(sql)) throw new HttpError(403, 'blocked_table', 'Tabela não permitida.');
+  const params = Array.isArray(b.params) ? b.params.slice(0, 20) : [];
+  const wrapped = `SELECT * FROM (${sql}) LIMIT 500`;
+  try {
+    const r = await env.DB.prepare(wrapped).bind(...params).all();
+    return { ok: true, rows: r.results || [], count: (r.results || []).length };
+  } catch (e) {
+    throw new HttpError(400, 'sql_error', String((e as Error).message || e).slice(0, 300));
+  }
+};
+
+const LEAD_EDIT = ['name', 'email', 'phone', 'business', 'business_type', 'country', 'location', 'stage', 'qualification', 'value_cents',
+  'currency', 'probability', 'expected_close_at', 'summary', 'next_step', 'lost_reason', 'tags', 'needs', 'timeline', 'budget'];
+const TASK_EDIT = ['title', 'type', 'due_date', 'due_time', 'lead_id', 'notes'];
+const TX_EDIT = ['date', 'kind', 'category', 'description', 'amount_cents', 'currency', 'status', 'recurring', 'lead_id'];
+
+function pickFields(d: Record<string, any>, allowed: string[]) {
+  const out: Record<string, any> = {};
+  for (const k of allowed) if (d[k] !== undefined) out[k] = d[k] === '' ? null : d[k];
+  if ('stage' in out && !(STAGES as readonly string[]).includes(out.stage)) throw new HttpError(400, 'bad_stage', `Etapa inválida: ${out.stage}`);
+  if ('currency' in out && out.currency && !CURRENCIES.includes(out.currency)) throw new HttpError(400, 'bad_currency');
+  if ('kind' in out && !['income', 'expense'].includes(out.kind)) throw new HttpError(400, 'bad_kind');
+  if ('status' in out && 'amount_cents' in out === false && !['paid', 'pending'].includes(out.status) && allowed === TX_EDIT) throw new HttpError(400, 'bad_status');
+  for (const k of ['value_cents', 'amount_cents', 'probability', 'lead_id', 'recurring']) if (k in out && out[k] != null) {
+    const n = Number(out[k]);
+    if (!Number.isFinite(n)) throw new HttpError(400, 'bad_number', `${k} inválido`);
+    out[k] = Math.round(n);
+  }
+  for (const k of ['due_date', 'date', 'expected_close_at']) if (k in out && out[k] && !DATE_RE.test(out[k])) throw new HttpError(400, 'bad_date', `${k} deve ser AAAA-MM-DD`);
+  return out;
+}
+
+/** CRUD feito pelo agente (as confirmações de exclusão e valores são pedidas no agente, antes de chamar). */
+const assistantCrud: Handler = async ({ req, env }) => {
+  const b = await readBody(req);
+  const acao = str(b.acao, 10), ent = str(b.entidade, 20);
+  const id = b.id != null ? Number(b.id) : null;
+  const dados = (b.dados && typeof b.dados === 'object') ? b.dados : {};
+  const table = { lead: 'leads', task: 'tasks', transaction: 'transactions' }[ent];
+  if (ent === 'note') {
+    if (acao !== 'create' || !dados.lead_id) throw new HttpError(400, 'bad_request', 'Nota precisa de lead_id.');
+    await addActivity(env.DB, Number(dados.lead_id), 'note', `${str(dados.content, 4000)}\n— pelo assistente`);
+    return { ok: true };
+  }
+  if (!table) throw new HttpError(400, 'bad_entity');
+  const allowed = ent === 'lead' ? LEAD_EDIT : ent === 'task' ? TASK_EDIT : TX_EDIT;
+  if (acao === 'delete') {
+    if (!id) throw new HttpError(400, 'missing_id');
+    const r = await env.DB.prepare(`DELETE FROM ${table} WHERE id = ?`).bind(id).run();
+    return { ok: true, deleted: r.meta.changes || 0 };
+  }
+  if (acao === 'update') {
+    if (!id) throw new HttpError(400, 'missing_id');
+    const f = pickFields(dados, allowed);
+    if (ent === 'task' && dados.done !== undefined) f.done_at = dados.done ? now() : null;
+    const keys = Object.keys(f);
+    if (!keys.length) throw new HttpError(400, 'nothing_to_update');
+    if (ent === 'lead') { f.updated_at = now(); keys.push('updated_at'); if (f.stage === 'won' || f.stage === 'lost') { f.closed_at = now(); keys.push('closed_at'); } }
+    await env.DB.prepare(`UPDATE ${table} SET ${keys.map((k) => `${k} = ?`).join(', ')} WHERE id = ?`).bind(...keys.map((k) => f[k]), id).run();
+    if (ent === 'lead') await addActivity(env.DB, id, 'update', `Atualizado pelo assistente: ${keys.filter((k) => k !== 'updated_at' && k !== 'closed_at').join(', ')}`);
+    return { ok: true, row: await env.DB.prepare(`SELECT * FROM ${table} WHERE id = ?`).bind(id).first() };
+  }
+  if (acao === 'create') {
+    const f = pickFields(dados, allowed);
+    if (ent === 'lead') { f.source = 'manual'; f.stage ||= 'new'; }
+    if (ent === 'task' && !f.title) throw new HttpError(400, 'missing_title');
+    if (ent === 'transaction') { if (!f.date) f.date = today(); if (f.amount_cents == null || !f.kind) throw new HttpError(400, 'missing_amount'); f.category ||= 'Outros'; }
+    const keys = Object.keys(f);
+    const r = await env.DB.prepare(`INSERT INTO ${table} (${keys.join(', ')}) VALUES (${keys.map(() => '?').join(', ')}) RETURNING *`).bind(...keys.map((k) => f[k])).first();
+    if (ent === 'lead' && r) await addActivity(env.DB, (r as any).id, 'created', 'Criado pelo assistente');
+    return { ok: true, row: r };
+  }
+  throw new HttpError(400, 'bad_action');
+};
+
+/* Fila da aba "Assistente" */
+const askAssistant: Handler = async ({ req, env, user }) => {
+  const b = await readBody(req);
+  const question = str(b.question, 2000);
+  if (!question) throw new HttpError(400, 'empty');
+  const history = Array.isArray(b.history) ? b.history.slice(-8).map((m: any) => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: str(m.content, 1500) })) : [];
+  await env.DB.prepare(`UPDATE assistant_jobs SET status = 'error', answer = 'O agente no PC não respondeu a tempo (PC desligado ou sem internet).', updated_at = ?
+                        WHERE status = 'pending' AND created_at < ?`).bind(now(), new Date(Date.now() - 4 * 60_000).toISOString()).run();
+  const r = await env.DB.prepare('INSERT INTO assistant_jobs (user_id, question, history) VALUES (?, ?, ?) RETURNING id').bind(user.id, question, JSON.stringify(history)).first<{ id: number }>();
+  return { id: r!.id };
+};
+
+const getAssistantJob: Handler = async ({ env, user, params }) => {
+  const r = await env.DB.prepare('SELECT id, status, answer, created_at, updated_at FROM assistant_jobs WHERE id = ? AND user_id = ?').bind(intId(params[0]), user.id).first();
+  if (!r) throw new HttpError(404, 'not_found');
+  return r;
+};
+
+const assistantStatus: Handler = async ({ env }) => {
+  const seen = await getSetting(env.DB, 'assistant_seen');
+  return { online: !!seen && Date.now() - Date.parse(seen) < 45_000, seen };
+};
+
+const bridgeNext: Handler = async ({ env }) => {
+  await setSetting(env.DB, 'assistant_seen', now());
+  await env.DB.prepare(`UPDATE assistant_jobs SET status = 'pending' WHERE status = 'working' AND updated_at < ?`).bind(new Date(Date.now() - 5 * 60_000).toISOString()).run();
+  const job = await env.DB.prepare(`UPDATE assistant_jobs SET status = 'working', updated_at = ?
+     WHERE id = (SELECT id FROM assistant_jobs WHERE status = 'pending' ORDER BY id LIMIT 1) RETURNING id, user_id, question, history`).bind(now()).first();
+  if (!job) return { job: null };
+  const u = await env.DB.prepare('SELECT name FROM users WHERE id = ?').bind((job as any).user_id).first<{ name: string }>();
+  return { job: { ...job, user_name: u?.name || '' } };
+};
+
+const bridgeAnswer: Handler = async ({ req, env, params }) => {
+  const b = await readBody(req);
+  await env.DB.prepare(`UPDATE assistant_jobs SET status = ?, answer = ?, updated_at = ? WHERE id = ?`)
+    .bind(b.status === 'error' ? 'error' : 'done', str(b.answer, 12000), now(), intId(params[0])).run();
+  return { ok: true };
+};
+
+
+/* ====================================================================== */
+/* Atividade geral: tudo o que acontece (e-mails, respostas, leads, acessos ao site)  */
+/* ====================================================================== */
+const activityFeed: Handler = async ({ env, url }) => {
+  const from = rangeStart(url.searchParams.get('range'));
+  const q = (sql: string) => env.DB.prepare(sql).bind(from).all<any>().then((r) => r.results || []);
+  const [pvDaily, pvPages, pvRefs, pvCountries, pvDevices, totals, timeline, emailsDaily] = await Promise.all([
+    q(`SELECT substr(created_at,1,10) d, COUNT(*) n FROM events WHERE type='page_view' AND created_at>=? GROUP BY d ORDER BY d`),
+    q(`SELECT ref page, COUNT(*) n FROM events WHERE type='page_view' AND created_at>=? GROUP BY ref ORDER BY n DESC LIMIT 12`),
+    q(`SELECT COALESCE(NULLIF(json_extract(meta,'$.ref'),''),'(direto)') r, COUNT(*) n FROM events WHERE type='page_view' AND created_at>=? GROUP BY r ORDER BY n DESC LIMIT 10`),
+    q(`SELECT COALESCE(json_extract(meta,'$.country'),'?') c, COUNT(*) n FROM events WHERE type='page_view' AND created_at>=? GROUP BY c ORDER BY n DESC LIMIT 10`),
+    q(`SELECT COALESCE(json_extract(meta,'$.device'),'?') dv, COUNT(*) n FROM events WHERE type='page_view' AND created_at>=? GROUP BY dv ORDER BY n DESC`),
+    q(`SELECT type, source, COUNT(*) n FROM events WHERE created_at>=? AND type<>'page_view' GROUP BY type, source`),
+    q(`SELECT e.id, e.created_at, e.type, e.source, e.ref, e.lead_id, e.meta, l.name lead_name, l.business
+       FROM events e LEFT JOIN leads l ON l.id = e.lead_id
+       WHERE e.created_at>=? AND e.type NOT IN ('page_view','chat_message','login') ORDER BY e.created_at DESC LIMIT 300`),
+    q(`SELECT substr(created_at,1,10) d, source, COUNT(*) n FROM events WHERE type='email_sent' AND created_at>=? GROUP BY d, source ORDER BY d`),
+  ]);
+  return { from, pvDaily, pvPages, pvRefs, pvCountries, pvDevices, totals, timeline, emailsDaily };
+};
+
+
+/* ====================================================================== */
+/* Prospecção: todos os negócios encontrados pelo prospector              */
+/* ====================================================================== */
+// Lista separada do pipeline (não mistura milhares de contactos frios com os leads do CRM).
+// O prospector no PC envia tudo (POST /api/bridge/prospects) e lê de volta as marcações manuais de "não contatar".
+
+const PROSPECT_STATUS = ['encontrado', 'qualificado', 'contatado', 'respondeu', 'interessado', 'descartado', 'nao_contactar', 'devolvido'];
+/** Saídas que nunca podem ser revertidas no painel (pedido da pessoa, devolução, denúncia). */
+const DNC_LOCKED = ['unsubscribe', 'not_interested', 'spam_complaint', 'bounce'];
+const P_FIELDS = ['name', 'category', 'city', 'state', 'country', 'email', 'phone', 'website', 'source', 'product', 'score', 'status', 'stage_raw',
+  'reason', 'emails_sent', 'last_email_at', 'last_subject', 'clicked', 'replied_at', 'reply_class', 'crm_lead_id'];
+
+const bridgeProspects: Handler = async ({ req, env }) => {
+  const b = await readBody(req);
+  const items = Array.isArray(b.items) ? b.items.slice(0, 250) : [];
+  const stmts: D1PreparedStatement[] = [];
+  for (const it of items) {
+    const ext = Number(it.ext_id);
+    if (!Number.isInteger(ext) || ext <= 0) continue;
+    const v = P_FIELDS.map((k) => (it[k] === undefined || it[k] === '' ? null : typeof it[k] === 'string' ? String(it[k]).slice(0, 500) : it[k]));
+    const dnc = it.do_not_contact ? 1 : 0;
+    stmts.push(env.DB.prepare(
+      `INSERT INTO prospects (ext_id, ${P_FIELDS.join(', ')}, do_not_contact, dnc_reason, dnc_source, dnc_at, updated_at)
+       VALUES (?, ${P_FIELDS.map(() => '?').join(', ')}, ?, ?, ?, CASE WHEN ? = 1 THEN ? END, ?)
+       ON CONFLICT(ext_id) DO UPDATE SET ${P_FIELDS.filter((k) => k !== 'status').map((k) => `${k} = excluded.${k}`).join(', ')},
+         status = CASE WHEN MAX(prospects.do_not_contact, excluded.do_not_contact) = 1 AND excluded.status <> 'devolvido' THEN 'nao_contactar' ELSE excluded.status END,
+         do_not_contact = MAX(prospects.do_not_contact, excluded.do_not_contact),
+         dnc_reason = CASE WHEN excluded.do_not_contact = 1 AND prospects.do_not_contact = 0 THEN excluded.dnc_reason ELSE prospects.dnc_reason END,
+         dnc_source = CASE WHEN excluded.do_not_contact = 1 AND (prospects.do_not_contact = 0 OR prospects.dnc_source LIKE 'manual%') AND excluded.dnc_source IS NOT NULL
+                           AND excluded.dnc_source NOT LIKE 'manual%' THEN excluded.dnc_source ELSE prospects.dnc_source END,
+         dnc_at = CASE WHEN excluded.do_not_contact = 1 AND prospects.do_not_contact = 0 THEN excluded.dnc_at ELSE prospects.dnc_at END,
+         updated_at = excluded.updated_at`,
+    ).bind(ext, ...v, dnc, dnc ? str(it.dnc_reason, 300) || null : null, dnc ? str(it.dnc_source, 40) || null : null, dnc, now(), now()));
+  }
+  if (stmts.length) await env.DB.batch(stmts);
+  return { ok: true, saved: stmts.length };
+};
+
+const listProspects: Handler = async ({ env, url }) => {
+  const sp = url.searchParams;
+  const where: string[] = [];
+  const args: unknown[] = [];
+  const status = sp.get('status') || '';
+  if (status === 'dnc') where.push('do_not_contact = 1');
+  else if (PROSPECT_STATUS.includes(status)) { where.push('status = ?'); args.push(status); }
+  if (sp.get('email') === '1') where.push(`IFNULL(email,'') <> ''`);
+  if (sp.get('clicked') === '1') where.push('clicked = 1');
+  const q = str(sp.get('q'), 100);
+  if (q) { where.push('(name LIKE ? OR email LIKE ? OR city LIKE ? OR category LIKE ?)'); args.push(...Array(4).fill(`%${q}%`)); }
+  const w = where.length ? 'WHERE ' + where.join(' AND ') : '';
+  const sorts: Record<string, string> = { recent: 'updated_at DESC', email: 'last_email_at DESC NULLS LAST', score: 'score DESC NULLS LAST', name: 'name COLLATE NOCASE' };
+  const order = sorts[sp.get('sort') || 'recent'] || sorts.recent;
+  const page = Math.max(1, Number(sp.get('page')) || 1);
+  const [rows, total, counts, dnc, extra] = await Promise.all([
+    env.DB.prepare(`SELECT * FROM prospects ${w} ORDER BY ${order} LIMIT 50 OFFSET ?`).bind(...args, (page - 1) * 50).all(),
+    env.DB.prepare(`SELECT COUNT(*) n FROM prospects ${w}`).bind(...args).first<{ n: number }>(),
+    env.DB.prepare(`SELECT status, COUNT(*) n FROM prospects GROUP BY status`).all<{ status: string; n: number }>(),
+    env.DB.prepare(`SELECT COUNT(*) n FROM prospects WHERE do_not_contact = 1`).first<{ n: number }>(),
+    env.DB.prepare(`SELECT COUNT(*) total, SUM(CASE WHEN IFNULL(email,'')<>'' THEN 1 ELSE 0 END) com_email, SUM(emails_sent) emails, SUM(clicked) cliques FROM prospects`).first(),
+  ]);
+  return { rows: rows.results || [], total: total?.n || 0, page, counts: Object.fromEntries((counts.results || []).map((r) => [r.status, r.n])), dnc: dnc?.n || 0, extra };
+};
+
+const updateProspect: Handler = async ({ req, env, params, user }) => {
+  const id = intId(params[0]);
+  const b = await readBody(req);
+  const p = await env.DB.prepare('SELECT * FROM prospects WHERE id = ?').bind(id).first<any>();
+  if (!p) throw new HttpError(404, 'not_found');
+  if (b.notes !== undefined) await env.DB.prepare('UPDATE prospects SET notes = ? WHERE id = ?').bind(str(b.notes, 2000) || null, id).run();
+  if (b.do_not_contact !== undefined) {
+    if (b.do_not_contact) {
+      await env.DB.prepare(`UPDATE prospects SET do_not_contact = 1, dnc_source = 'manual', dnc_reason = ?, dnc_at = ?, status = 'nao_contactar', updated_at = ? WHERE id = ?`)
+        .bind(str(b.reason, 300) || `marcado por ${user.name}`, now(), now(), id).run();
+    } else {
+      if (p.do_not_contact && DNC_LOCKED.includes(p.dnc_source)) throw new HttpError(409, 'locked', 'Esta pessoa pediu para sair (ou o e-mail não existe). Não pode voltar a ser contactada.');
+      await env.DB.prepare(`UPDATE prospects SET do_not_contact = 0, dnc_source = 'manual_off', dnc_reason = NULL, dnc_at = ?, updated_at = ? WHERE id = ?`).bind(now(), now(), id).run();
+    }
+  }
+  return { ok: true, row: await env.DB.prepare('SELECT * FROM prospects WHERE id = ?').bind(id).first() };
+};
+
+/** Passa um contacto da prospecção para o CRM (pipeline), sem duplicar. */
+const prospectToCrm: Handler = async ({ env, params }) => {
+  const id = intId(params[0]);
+  const p = await env.DB.prepare('SELECT * FROM prospects WHERE id = ?').bind(id).first<any>();
+  if (!p) throw new HttpError(404, 'not_found');
+  if (p.crm_lead_id) return { ok: true, lead_id: p.crm_lead_id };
+  let lead = p.email ? await env.DB.prepare(`SELECT id FROM leads WHERE email = ? ORDER BY id DESC LIMIT 1`).bind(p.email).first<{ id: number }>() : null;
+  if (!lead) {
+    lead = await env.DB.prepare(`INSERT INTO leads (source, stage, name, email, phone, business, business_type, country, location, summary)
+      VALUES ('agent', ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`).bind(p.emails_sent ? 'contacted' : 'new', p.name, p.email, p.phone, p.name, p.category, p.country,
+      p.city, `Vindo da prospecção (${p.product || '—'}). ${p.reason || ''}`.trim()).first<{ id: number }>();
+    await addActivity(env.DB, lead!.id, 'created', 'Criado a partir da lista de prospecção');
+  }
+  await env.DB.prepare('UPDATE prospects SET crm_lead_id = ? WHERE id = ?').bind(lead!.id, id).run();
+  return { ok: true, lead_id: lead!.id };
+};
+
+const exportProspects: Handler = async ({ env }) => {
+  const r = await env.DB.prepare(`SELECT name, category, city, state, country, email, phone, website, product, score, status, emails_sent, last_email_at,
+    clicked, replied_at, reply_class, do_not_contact, dnc_reason, dnc_source FROM prospects ORDER BY id`).all<any>();
+  const cols = ['name', 'category', 'city', 'state', 'country', 'email', 'phone', 'website', 'product', 'score', 'status', 'emails_sent', 'last_email_at',
+    'clicked', 'replied_at', 'reply_class', 'do_not_contact', 'dnc_reason', 'dnc_source'];
+  const cell = (v: unknown) => { const s = v == null ? '' : String(v); return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  const csv = '﻿' + cols.join(',') + '\n' + (r.results || []).map((row) => cols.map((c) => cell(row[c])).join(',')).join('\n');
+  return new Response(csv, { headers: { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="prospeccao.csv"', ...SECURITY_HEADERS } });
 };
 
 /* ====================================================================== */
@@ -1231,6 +1508,22 @@ const routes: [string, RegExp, Handler, Access][] = [
   ['POST', /^\/api\/ingest\/lead$/, ingestLead, 'ingest'],
   ['POST', /^\/api\/ingest\/event$/, ingestEvent, 'ingest'],
   ['POST', /^\/api\/ingest\/email$/, async (c) => ingestEvent(c), 'ingest'],
+  ['GET', /^\/api\/activity$/, activityFeed, 'user'],
+  ['GET', /^\/api\/prospects$/, listProspects, 'user'],
+  ['PATCH', /^\/api\/prospects\/(\d+)$/, updateProspect, 'user'],
+  ['POST', /^\/api\/prospects\/(\d+)\/to-crm$/, prospectToCrm, 'user'],
+  ['GET', /^\/api\/export\/prospects\.csv$/, exportProspects, 'user'],
+  ['POST', /^\/api\/bridge\/prospects$/, bridgeProspects, 'assistant'],
+  ['GET', /^\/api\/bridge\/ping$/, async () => ({ ok: true, service: 'Pipe Hero Studio CRM (assistente)' }), 'assistant'],
+  ['POST', /^\/api\/bridge\/lead$/, ingestLead, 'assistant'],
+  ['POST', /^\/api\/bridge\/event$/, ingestEvent, 'assistant'],
+  ['POST', /^\/api\/assistant$/, askAssistant, 'user'],
+  ['GET', /^\/api\/assistant\/status$/, assistantStatus, 'user'],
+  ['GET', /^\/api\/assistant\/(\d+)$/, getAssistantJob, 'user'],
+  ['GET', /^\/api\/bridge\/next$/, bridgeNext, 'assistant'],
+  ['POST', /^\/api\/bridge\/answer\/(\d+)$/, bridgeAnswer, 'assistant'],
+  ['POST', /^\/api\/bridge\/query$/, assistantQuery, 'assistant'],
+  ['POST', /^\/api\/bridge\/crud$/, assistantCrud, 'assistant'],
 ];
 
 async function handleApi(req: Request, env: AppEnv, ctx: ExecutionContext, url: URL): Promise<Response> {
@@ -1242,6 +1535,11 @@ async function handleApi(req: Request, env: AppEnv, ctx: ExecutionContext, url: 
     methodMatched = true;
     if (method !== req.method) continue;
 
+    if (access === 'assistant') {
+      await checkAssistant(req, env);
+      const out = await handler({ req, env, url, user: null as unknown as User, params: m.slice(1), ctx });
+      return out instanceof Response ? out : json(out);
+    }
     if (access === 'ingest') {
       await checkIngest(req, env);
       const out = await handler({ req, env, url, user: null as unknown as User, params: m.slice(1), ctx });

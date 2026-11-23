@@ -206,14 +206,14 @@ export async function renderBoard(ctx) {
   const f = { q: '', owner: getPref('phs-b-owner', ''), source: getPref('phs-b-src', ''), qual: getPref('phs-b-qual', ''), closed: getPref('phs-b-closed', '30') };
 
   ctx.page.innerHTML = `
-    <div class="toolbar">
+    <div class="toolbar crm-toolbar">
       <div class="search-box">${icon('search')}<input class="input" type="search" placeholder="Procurar no pipeline…" data-f="q" aria-label="Procurar"></div>
       ${ownerFilter(users, f.owner)}
       <select class="input" data-f="source" aria-label="Origem"><option value="">Todas as origens</option>${SOURCES.map(([k, l]) => `<option value="${k}"${f.source === k ? ' selected' : ''}>${l}</option>`).join('')}</select>
       <select class="input" data-f="qual" aria-label="Qualificação"><option value="">Qualquer qualificação</option>${Object.entries(QUAL).map(([k, l]) => `<option value="${k}"${f.qual === k ? ' selected' : ''}>${l}</option>`).join('')}</select>
       <select class="input" data-f="closed" aria-label="Fechados"><option value="30"${f.closed === '30' ? ' selected' : ''}>Fechados: 30 dias</option><option value="90"${f.closed === '90' ? ' selected' : ''}>Fechados: 90 dias</option><option value="all"${f.closed === 'all' ? ' selected' : ''}>Fechados: todos</option><option value="none"${f.closed === 'none' ? ' selected' : ''}>Esconder fechados</option></select>
-      <span class="muted" style="margin-left:auto;font-size:13px" data-sum></span>
     </div>
+    <section class="pipe-kpis" data-sum aria-label="Resumo do pipeline"></section>
     <div class="board" data-board></div>`;
   const board = ctx.page.querySelector('[data-board]');
   const sumEl = ctx.page.querySelector('[data-sum]');
@@ -238,7 +238,23 @@ export async function renderBoard(ctx) {
     const open = shown.filter((l) => OPEN.includes(l.stage));
     const weighted = {};
     for (const l of open) if (l.value_cents) weighted[l.currency] = (weighted[l.currency] || 0) + Math.round((l.value_cents * probOf(l)) / 100);
-    sumEl.innerHTML = `${num(open.length)} em aberto · ponderado <strong style="color:var(--ink)">${moneyMulti(weighted)}</strong>`;
+    const openVal = {};
+    for (const l of open) if (l.value_cents) openVal[l.currency] = (openVal[l.currency] || 0) + l.value_cents;
+    const since30 = new Date(Date.now() - 30 * 864e5).toISOString();
+    const since90 = new Date(Date.now() - 90 * 864e5).toISOString();
+    const won30 = shown.filter((l) => l.stage === 'won' && (l.closed_at || l.updated_at) >= since30);
+    const wonVal = {};
+    for (const l of won30) if (l.value_cents) wonVal[l.currency] = (wonVal[l.currency] || 0) + l.value_cents;
+    const closed90 = leads.filter((l) => ['won', 'lost'].includes(l.stage) && (l.closed_at || l.updated_at) >= since90);
+    const rate = closed90.length ? Math.round((closed90.filter((l) => l.stage === 'won').length / closed90.length) * 100) : null;
+    const staleN = open.filter((l) => daysSince(l.last_activity_at || l.created_at) >= STALE_DAYS).length;
+    const pv = (m, cls = '') => `<span class="pk-v ${cls}${Object.keys(m).length > 1 ? ' multi' : ''}">${moneyMulti(m, '—')}</span>`;
+    sumEl.innerHTML = `
+      <div class="pk"><span class="pk-l">Em aberto</span>${pv(openVal)}<span class="pk-f">${num(open.length)} negócio${open.length === 1 ? '' : 's'}</span></div>
+      <div class="pk"><span class="pk-l">Previsão ponderada</span>${pv(weighted)}<span class="pk-f">valor × probabilidade da etapa</span></div>
+      <div class="pk"><span class="pk-l">Ganhos (30 dias)</span>${pv(wonVal, 'ok')}<span class="pk-f">${num(won30.length)} fechado${won30.length === 1 ? '' : 's'}</span></div>
+      <div class="pk"><span class="pk-l">Taxa de conversão</span><span class="pk-v">${rate == null ? '—' : rate + '%'}</span><span class="pk-f">ganhos ÷ fechados (90 dias)</span></div>
+      <div class="pk${staleN ? ' warn' : ''}"><span class="pk-l">Parados ${STALE_DAYS}+ dias</span><span class="pk-v">${num(staleN)}</span><span class="pk-f">${staleN ? 'precisam de atenção' : 'tudo em dia'}</span></div>`;
     board.innerHTML = STAGES.filter(([k]) => !(f.closed === 'none' && ['won', 'lost'].includes(k)))
       .map(([k, label]) => {
         const items = shown.filter((l) => l.stage === k);
@@ -246,7 +262,7 @@ export async function renderBoard(ctx) {
         for (const l of items) if (l.value_cents) val[l.currency] = (val[l.currency] || 0) + l.value_cents;
         return `<section class="col st-${k}" data-stage="${k}" aria-label="${label}">
           <div class="col-h"><div class="r1"><b>${label}</b><span class="n">${items.length}</span>${OPEN.includes(k) ? `<button class="btn ghost xs icon add" data-add="${k}" aria-label="Novo lead em ${label}" title="Novo lead em ${label}">${icon('plus')}</button>` : ''}</div>
-            <span class="v">${moneyMulti(val, '—')}${OPEN.includes(k) ? ` <span class="faint">· ${STAGE_PROB[k]}%</span>` : ''}</span></div>
+            <div class="r2"><span class="v">${moneyMulti(val, '—')}</span>${OPEN.includes(k) ? `<span class="p" title="Probabilidade de fecho nesta etapa">${STAGE_PROB[k]}%</span>` : ''}</div></div>
           <div class="col-body">${items.map(card).join('') || `<p class="col-empty">${OPEN.includes(k) ? 'Arraste um lead para aqui' : 'Nada por aqui'}</p>`}</div>
         </section>`;
       })
@@ -256,15 +272,18 @@ export async function renderBoard(ctx) {
     const open = OPEN.includes(l.stage);
     const idle = daysSince(l.last_activity_at || l.created_at);
     const stale = open && idle >= STALE_DAYS;
-    return `<a class="lcard${l.qualification === 'hot' && open ? ' hot-edge' : ''}" href="#/leads/${l.id}" draggable="true" data-id="${l.id}">
-      <span class="corner">${avatar(l.owner_name, 'xs', l.owner_name ? `Responsável: ${l.owner_name}` : 'Sem responsável')}</span>
-      <span class="t1">${esc(l.name || l.email || l.phone || 'Sem nome')}</span>
-      ${l.business ? `<span class="t2">${esc(l.business)}</span>` : ''}
-      <span class="meta">${srcTag(l.source)}${qualTag(l.qualification)}${tagChips(l.tags, 2)}</span>
+    const hot = l.qualification === 'hot' && open;
+    return `<a class="lcard${hot ? ' hot-edge' : ''}" href="#/leads/${l.id}" draggable="true" data-id="${l.id}">
+      <span class="lc-head">
+        ${avatar(l.name || l.email || '?', 'sm')}
+        <span class="lc-who"><span class="t1">${esc(l.name || l.email || l.phone || 'Sem nome')}</span>${l.business ? `<span class="t2">${esc(l.business)}</span>` : ''}</span>
+      </span>
+      <span class="lc-val${l.value_cents ? '' : ' none'}">${l.value_cents ? money(l.value_cents, l.currency) : 'Sem valor'}</span>
+      <span class="meta">${qualTag(l.qualification)}${srcTag(l.source)}${tagChips(l.tags, 2)}</span>
       <span class="foot">
         ${open && l.next_action_at ? `<span class="${dueClass(l.next_action_at)}" title="Próxima tarefa">${icon('clock')}${esc(dueLabel(l.next_action_at))}</span>` : open ? `<span class="faint" title="Sem tarefa marcada">${icon('clock')}Sem tarefa</span>` : `<span>${ago(l.closed_at || l.updated_at)}</span>`}
         ${stale ? `<span class="stale" title="Sem atividade há ${idle} dias">${icon('alert')}${idle}d</span>` : ''}
-        ${l.value_cents ? `<span class="val">${money(l.value_cents, l.currency)}</span>` : ''}
+        <span class="own">${avatar(l.owner_name, 'xs', l.owner_name ? `Responsável: ${l.owner_name}` : 'Sem responsável')}</span>
       </span>
     </a>`;
   };

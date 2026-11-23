@@ -166,9 +166,43 @@ export class Mailer extends WorkerEntrypoint<Env> {
   }
 }
 
+const BOT_UA = /bot|crawl|spider|slurp|preview|headless|lighthouse|monitor|curl|wget|python|scrapy|facebookexternalhit|embedly/i;
+
+/** Contador de visitas: sem cookies, sem IP; só página, origem (domínio), idioma, país e tipo de aparelho. */
+async function handlePageView(request: Request, env: Env) {
+  if (request.method !== 'POST') return new Response(null, { status: 405 });
+  const ua = request.headers.get('User-Agent') || '';
+  const origin = request.headers.get('Origin') || '';
+  if (BOT_UA.test(ua) || (origin && !/pipeherostudio\.digital$/.test(new URL(origin).host))) return new Response(null, { status: 204 });
+  let b: Record<string, unknown> = {};
+  try { b = JSON.parse((await request.text()).slice(0, 2000) || '{}'); } catch { /* ignora */ }
+  const path = String(b.p || '/').slice(0, 200);
+  let ref = '';
+  try { const h = new URL(String(b.r || '')).host; ref = h.endsWith('pipeherostudio.digital') ? '' : h; } catch { /* sem origem */ }
+  const country = (request as unknown as { cf?: { country?: string } }).cf?.country || null;
+  await logEvent(env.DB, 'page_view', 'site', { ref: path, meta: { ref, lang: String(b.l || '').slice(0, 5), country, device: /Mobi|Android|iPhone/i.test(ua) ? 'mobile' : 'desktop' } });
+  return new Response(null, { status: 204 });
+}
+
+/** Link rastreado dos e-mails do prospector: regista o clique (ligado ao lead) e leva para a página de websites. */
+async function handleClick(request: Request, env: Env, token: string) {
+  const ua = request.headers.get('User-Agent') || '';
+  if (!BOT_UA.test(ua) && /^[A-Za-z0-9_-]{4,40}$/.test(token)) {
+    try {
+      const sent = await env.DB.prepare(`SELECT lead_id, ref FROM events WHERE type = 'email_sent' AND json_extract(meta, '$.token') = ? LIMIT 1`).bind(token).first<{ lead_id: number | null; ref: string | null }>();
+      const dup = await env.DB.prepare(`SELECT 1 FROM events WHERE type = 'email_click' AND ref = ? AND created_at > ? LIMIT 1`).bind(token, new Date(Date.now() - 60_000).toISOString()).first();
+      if (!dup) await logEvent(env.DB, 'email_click', 'agent', { ref: token, leadId: sent?.lead_id ?? null, meta: { to: sent?.ref || null, country: (request as unknown as { cf?: { country?: string } }).cf?.country || null } });
+    } catch { /* o redirecionamento nunca falha */ }
+  }
+  return Response.redirect('https://pipeherostudio.digital/en/websites/', 302);
+}
+
 export default {
   async fetch(request, env, ctx): Promise<Response> {
     const url = new URL(request.url);
+    if (url.pathname === '/api/pv') return handlePageView(request, env);
+    const clique = url.pathname.match(/^\/r\/([^/]+)\/?$/);
+    if (clique) return handleClick(request, env, clique[1]);
     if (url.pathname === '/api/contact') return handleContact(request, env);
     if (url.pathname === '/api/chat') return handleChat(request, env, ctx);
     if (url.pathname.startsWith('/api/')) return json({ ok: false, error: 'not_found' }, 404);

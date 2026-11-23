@@ -94,6 +94,11 @@ const chatOn = config.chatEnabled;
         var a = e.target && e.target.closest ? e.target.closest('[data-lang]') : null;
         if (a) { try { localStorage.setItem('phs-lang', a.getAttribute('data-lang')); } catch (_) {} }
       });
+      try {
+        var pv = JSON.stringify({ p: location.pathname, r: document.referrer, l: document.documentElement.lang });
+        if (navigator.sendBeacon) navigator.sendBeacon('/api/pv', pv);
+        else fetch('/api/pv', { method: 'POST', body: pv, keepalive: true });
+      } catch (_) {}
     </script>
   </body>
 </html>

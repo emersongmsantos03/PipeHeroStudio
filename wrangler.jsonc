@@ -10,7 +10,7 @@
     "binding": "ASSETS",
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "404-page",
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": ["/api/*", "/r/*"]
   },
 
   // Envio do formulário por e-mail (Cloudflare Email Service).

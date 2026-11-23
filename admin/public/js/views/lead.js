@@ -56,34 +56,33 @@ export async function render(ctx) {
   const idle = daysSince(activities.find((a) => [...MANUAL, 'task'].includes(a.type))?.created_at || l.created_at);
   const tab = getPref('phs-lead-tab', 'activity');
 
+  const act = (cls, inner, label, attrs = '') => `<span class="ra">${cls === 'a' ? `<a class="ra-b" ${attrs} aria-label="${label}">${inner}</a>` : `<button type="button" class="ra-b" ${attrs} aria-label="${label}">${inner}</button>`}<span>${label}</span></span>`;
+  const telHref = l.phone ? `tel:${esc(l.phone.replace(/[^\d+]/g, ''))}` : '';
   ctx.page.innerHTML = `
-    <section class="card lead-hero">
-      <div class="lead-top">
-        ${avatar(l.name || l.email || '?', 'lg')}
-        <div class="who">
-          <h2>${esc(l.name || l.email || 'Sem nome')} ${qualTag(l.qualification)}</h2>
-          <div class="tags">${l.business ? `<span class="muted">${icon('building').replace('<svg', '<svg width="14" height="14" style="vertical-align:-2px"')} ${esc(l.business)}</span>` : ''}${srcTag(l.source)}${svc.map((s) => `<span class="badge outline">${esc(s)}</span>`).join('')}<span class="faint" style="font-size:12.5px" title="${esc(dateTime(l.created_at))}">entrou ${ago(l.created_at)}</span>${!closed && idle >= 7 ? `<span class="badge pending" title="Última atividade há ${idle} dias">${icon('alert').replace('<svg', '<svg width="12" height="12"')} parado há ${idle} dias</span>` : ''}</div>
-          <div class="contact">
-            ${l.email ? `<a href="mailto:${esc(l.email)}">${icon('mail')}${esc(l.email)}</a>` : ''}
-            ${l.phone ? `<a href="tel:${esc(l.phone.replace(/[^\d+]/g, ''))}">${icon('phone')}${esc(l.phone)}</a>` : ''}
-            ${l.location || l.country ? `<span style="display:inline-flex;gap:5px;align-items:center">${icon('globe').replace('<svg', '<svg width="14" height="14"')}${esc([l.location, l.country].filter(Boolean).join(', '))}</span>` : ''}
-          </div>
-        </div>
-        <div class="quick">
-          <button class="btn primary" data-msg aria-haspopup="menu">${icon('send')}Mensagem</button>
-          ${wa ? `<a class="btn icon" href="${wa}" target="_blank" rel="noopener" data-log="whatsapp" title="WhatsApp" aria-label="WhatsApp">${icon('whatsapp')}</a>` : ''}
-          ${mail ? `<a class="btn icon" href="${mail}" data-log="email" title="E-mail" aria-label="E-mail">${icon('mail')}</a>` : ''}
-          ${l.phone ? `<a class="btn icon" href="tel:${esc(l.phone.replace(/[^\d+]/g, ''))}" data-log="call" title="Ligar" aria-label="Ligar">${icon('phone')}</a>` : ''}
-          <button class="btn icon" data-more aria-label="Mais ações">${icon('more')}</button>
-        </div>
-      </div>
-      <div class="pipeline" role="group" aria-label="Etapa">${STAGES.map(([k, lab], i) => `<button type="button" class="${k}${!closed && i < stageIdx ? ' past' : ''}${l.stage === 'won' && i < 4 ? ' past' : ''}" data-stage="${k}" aria-pressed="${l.stage === k}">${lab}</button>`).join('')}</div>
-    </section>
-
-    <div class="lead-grid">
+    <div class="lead-grid rec">
       <div class="l-col l-left">
+        <section class="card rec-profile">
+          ${avatar(l.name || l.email || '?', 'xl')}
+          <h2>${esc(l.name || l.email || 'Sem nome')}</h2>
+          ${l.business ? `<p class="rec-biz">${icon('building')}${esc(l.business)}${l.business_type ? ` <span class="faint">· ${esc(l.business_type)}</span>` : ''}</p>` : ''}
+          <div class="rec-tags">${qualTag(l.qualification)}${srcTag(l.source)}${svc.map((s) => `<span class="badge outline">${esc(s)}</span>`).join('')}</div>
+          <div class="rec-actions">
+            ${act('b', icon('note'), 'Nota', 'data-note')}
+            ${mail ? act('a', icon('mail'), 'E-mail', `href="${mail}" data-log="email"`) : ''}
+            ${l.phone ? act('a', icon('phone'), 'Ligar', `href="${telHref}" data-log="call"`) : ''}
+            ${wa ? act('a', icon('whatsapp'), 'Whats', `href="${wa}" target="_blank" rel="noopener" data-log="whatsapp"`) : ''}
+            ${act('b', icon('tasks'), 'Tarefa', 'data-task2')}
+            ${act('b', icon('more'), 'Mais', 'data-more aria-haspopup="menu"')}
+          </div>
+          <button class="btn primary rec-msg" data-msg aria-haspopup="menu">${icon('send')}Mensagem a partir de modelo</button>
+          <div class="rec-contact">
+            ${l.email ? `<a href="mailto:${esc(l.email)}">${icon('mail')}<span>${esc(l.email)}</span></a>` : ''}
+            ${l.phone ? `<a href="${telHref}">${icon('phone')}<span>${esc(l.phone)}</span></a>` : ''}
+            ${l.location || l.country ? `<span>${icon('globe')}<span>${esc([l.location, l.country].filter(Boolean).join(', '))}</span></span>` : ''}
+          </div>
+        </section>
         <section class="card">
-          <div class="card-h"><h2>Sobre</h2><button class="end btn ghost xs" data-edit>${icon('edit')}Editar</button></div>
+          <div class="card-h"><h2>Sobre este lead</h2><button class="end btn ghost xs" data-edit>${icon('edit')}Editar</button></div>
           ${GROUPS.map(([g, fields]) => {
             const rows = fields.filter(([k]) => l[k]);
             if (!rows.length) return '';
@@ -94,6 +93,11 @@ export async function render(ctx) {
       </div>
 
       <div class="l-col l-mid">
+        <section class="card rec-stage">
+          <div class="rec-stage-h"><span class="faint">Etapa do negócio</span>
+            <span class="rec-meta"><span title="${esc(dateTime(l.created_at))}">entrou ${ago(l.created_at)}</span>${!closed && idle >= 7 ? `<span class="badge pending" title="Última atividade há ${idle} dias">${icon('alert')} parado há ${idle} dias</span>` : ''}</span></div>
+          <div class="pipeline" role="group" aria-label="Etapa">${STAGES.map(([k, lab], i) => `<button type="button" class="${k}${!closed && i < stageIdx ? ' past' : ''}${l.stage === 'won' && i < 4 ? ' past' : ''}" data-stage="${k}" aria-pressed="${l.stage === k}" title="${lab}">${lab}</button>`).join('')}</div>
+        </section>
         ${l.summary || l.next_step ? `<section class="card"><div class="card-h"><span class="ico">${icon('spark')}</span><h2>Resumo</h2>${l.source === 'chat' ? '<span class="muted">pela Ava</span>' : ''}</div>
           ${l.summary ? `<div class="summary">${esc(l.summary)}</div>` : ''}
           ${l.next_step ? `<p style="margin:12px 0 0;font-size:13.5px"><strong>Próximo passo sugerido:</strong> ${esc(l.next_step)}</p>` : ''}</section>` : ''}
@@ -211,6 +215,14 @@ export async function render(ctx) {
   ctx.page.querySelector('[data-task]').addEventListener('click', () => taskModal({ lead_id: l.id, lead_name: l.name || l.email || l.business, assignee_id: l.owner_id || me.id, type: 'call', due_date: addDays(1) }, reload));
   bindTasks(ctx.page.querySelector('[data-tasks]'), tasks.map((t) => ({ ...t, lead_name: l.name, lead_phone: l.phone })), reload);
 
+  ctx.page.querySelector('[data-task2]').addEventListener('click', () => ctx.page.querySelector('[data-task]').click());
+  ctx.page.querySelector('[data-note]').addEventListener('click', () => {
+    showTab('activity');
+    const form = ctx.page.querySelector('[data-act]');
+    form.querySelectorAll('[data-type]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.type === 'note')));
+    form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => form.querySelector('textarea').focus(), 250);
+  });
   ctx.page.querySelector('[data-tx]').addEventListener('click', () => txModal({ kind: 'income', lead_id: l.id, currency: l.currency, amount_cents: l.value_cents, description: l.business || l.name, category: 'Projeto' }, reload));
   ctx.page.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', () => editModal(l, reload)));
   ctx.page.querySelector('[data-more]').addEventListener('click', (e) => menu(e.currentTarget, [

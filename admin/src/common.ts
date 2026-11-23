@@ -9,6 +9,7 @@ export interface AppEnv {
   INGEST_RL: RateLimit;
   NOTIFY_TO?: string;
   RESEND_API_KEY?: string;
+  ASSISTANT_KEY?: string;
   MAILER: { send(mail: import('../../shared/crm').Mail): Promise<{ ok: boolean; error?: string }> };
 }
 

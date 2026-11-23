@@ -9,6 +9,9 @@ import * as settings from './views/settings.js';
 import * as tasks from './views/tasks.js';
 import * as reports from './views/reports.js';
 import * as templates from './views/templates.js';
+import * as activity from './views/activity.js';
+import { montarAva, abrirAva } from './ava.js';
+import * as prospects from './views/prospects.js';
 
 applyTheme(getPref('phs-theme', 'auto'));
 
@@ -18,9 +21,11 @@ export const state = { user: null, pendingUsers: 0, tasksDue: 0 };
 const NAV = [
   { href: '#/', key: 'dashboard', label: 'Visão geral', icon: 'home' },
   { href: '#/tasks', key: 'tasks', label: 'Tarefas', icon: 'tasks', badge: () => state.tasksDue, red: true },
+  { href: '#/activity', key: 'activity', label: 'Atividade', icon: 'clock' },
   { group: 'Vendas' },
   { href: '#/crm', key: 'crm', label: 'Pipeline', icon: 'board' },
   { href: '#/leads', key: 'leads', label: 'Leads', icon: 'list' },
+  { href: '#/prospects', key: 'prospects', label: 'Prospecção', icon: 'search' },
   { href: '#/reports', key: 'reports', label: 'Relatórios', icon: 'chart' },
   { group: 'Gestão' },
   { href: '#/finance', key: 'finance', label: 'Financeiro', icon: 'money' },
@@ -39,6 +44,9 @@ const ROUTES = [
   [/^\/leads\/(\d+)$/, 'leads', (c) => lead.render(c), false, 'list'],
   [/^\/reports$/, 'reports', (c) => reports.render(c)],
   [/^\/finance$/, 'finance', (c) => finance.render(c)],
+  [/^\/activity$/, 'activity', (c) => activity.render(c)],
+  [/^\/prospects$/, 'prospects', (c) => prospects.render(c), false, 'list'],
+  [/^\/assistant$/, 'dashboard', (c) => { abrirAva(); location.hash = '#/'; }],
   [/^\/agent$/, 'agent', (c) => agent.render(c)],
   [/^\/templates$/, 'templates', (c) => templates.render(c), false, 'list'],
   [/^\/integrations$/, 'integrations', (c) => settings.renderIntegrations(c), true, 'list'],
@@ -56,6 +64,7 @@ const isDark = () => document.documentElement.dataset.theme === 'dark' || (!docu
 
 /* ---------- Login e cadastro ---------- */
 function authPage(mode) {
+  document.querySelector('.ava')?.remove();
   const login = mode === 'login';
   root.innerHTML = `<main class="auth">
     <aside class="auth-side">
@@ -291,6 +300,7 @@ async function route() {
   if (!state.user) return authPage(path === '/signup' ? 'signup' : 'login');
   if (path === '/login' || path === '/signup') { location.hash = '#/'; return; }
   if (!root.querySelector('.shell')) shell();
+  montarAva();
 
   const found = ROUTES.find(([re]) => re.test(path));
   const page = root.querySelector('[data-page]');
