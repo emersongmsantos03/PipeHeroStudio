@@ -1121,6 +1121,24 @@ const ingestLead: Handler = async ({ req, env }) => {
   const sessionId = b.session_id ? `agent:${str(b.session_id, 100)}` : null;
   const { id, created } = await saveLead(env.DB, input, { source: 'agent', sessionId, note: `Recebido de ${agentName}${input.summary ? ': ' + input.summary : ''}` });
 
+  // Lead vindo da prospecção (clicou ou respondeu): já foi contactado, liga à lista de prospecção e cria a tarefa de seguimento.
+  if (b.contacted) await env.DB.prepare(`UPDATE leads SET stage = 'contacted', updated_at = ? WHERE id = ? AND stage = 'new'`).bind(now(), id).run();
+  if (input.email) await env.DB.prepare(`UPDATE prospects SET crm_lead_id = ? WHERE lower(email) = lower(?) AND crm_lead_id IS NULL`).bind(id, input.email).run().catch(() => null);
+  const tk = b.task && typeof b.task === 'object' ? b.task : null;
+  const tkTitle = tk ? str(tk.title, 200) : '';
+  if (tkTitle) {
+    const open = await env.DB.prepare(`SELECT 1 FROM tasks WHERE lead_id = ? AND done_at IS NULL AND title = ?`).bind(id, tkTitle).first();
+    if (!open) {
+      const row = await env.DB.prepare('SELECT owner_id FROM leads WHERE id = ?').bind(id).first<{ owner_id: number | null }>();
+      const admin = await env.DB.prepare(`SELECT id FROM users WHERE status = 'active' AND role = 'admin' ORDER BY id LIMIT 1`).first<{ id: number }>();
+      const who = row?.owner_id || admin?.id || null;
+      if (!row?.owner_id && who) await env.DB.prepare('UPDATE leads SET owner_id = ? WHERE id = ?').bind(who, id).run();
+      const due = typeof tk!.due_date === 'string' && DATE_RE.test(tk!.due_date) ? tk!.due_date : today();
+      const type = ['todo', 'call', 'email', 'whatsapp', 'meeting'].includes(String(tk!.type)) ? String(tk!.type) : 'email';
+      await insertTask(env.DB, { title: tkTitle, type, due_date: due, lead_id: id, assignee_id: who, notes: str(tk!.notes, 2000) || null } as any);
+    }
+  }
+
   if (created && b.notify !== false) {
     const link = `${ADMIN_URL}/#/leads/${id}`;
     const rows: [string, string | undefined | null][] = [
