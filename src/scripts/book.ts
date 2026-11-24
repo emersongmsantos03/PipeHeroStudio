@@ -14,19 +14,43 @@ if (root) {
   let chosen = '';
 
   const guess = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; } catch { return 'UTC'; } })();
-  let zones: string[] = [];
-  try { zones = (Intl as any).supportedValuesOf('timeZone'); } catch { /* navegador antigo */ }
-  if (!zones.length) zones = ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'America/Toronto', 'America/Vancouver', 'America/Sao_Paulo',
-    'Europe/London', 'Europe/Dublin', 'Europe/Lisbon', 'Europe/Madrid', 'Australia/Sydney', 'Australia/Perth', 'Pacific/Auckland', 'UTC'];
-  if (!zones.includes(guess)) zones.unshift(guess);
-  const offset = (z: string) => {
+  // lista curta e com nomes que as pessoas reconhecem (em vez das ~400 zonas do navegador)
+  const GROUPS: [string, [string, string][]][] = [
+    [t.tzGroups?.na || 'United States & Canada', [
+      ['America/New_York', 'Eastern Time (New York, Miami, Toronto)'], ['America/Chicago', 'Central Time (Chicago, Dallas, Houston)'],
+      ['America/Denver', 'Mountain Time (Denver, Salt Lake City)'], ['America/Phoenix', 'Arizona (Phoenix)'],
+      ['America/Los_Angeles', 'Pacific Time (Los Angeles, Seattle, Vancouver)'], ['America/Anchorage', 'Alaska'], ['Pacific/Honolulu', 'Hawaii'],
+      ['America/Halifax', 'Atlantic Time (Halifax)']]],
+    [t.tzGroups?.eu || 'UK & Europe', [
+      ['Europe/London', 'London'], ['Europe/Dublin', 'Dublin'], ['Europe/Lisbon', 'Lisbon'], ['Europe/Madrid', 'Madrid, Paris, Berlin, Rome']]],
+    [t.tzGroups?.la || 'Latin America', [
+      ['America/Sao_Paulo', 'Brasília (São Paulo, Rio, Curitiba)'], ['America/Mexico_City', 'Mexico City'], ['America/Bogota', 'Bogotá, Lima'],
+      ['America/Argentina/Buenos_Aires', 'Buenos Aires'], ['America/Santiago', 'Santiago']]],
+    [t.tzGroups?.oc || 'Australia & New Zealand', [
+      ['Australia/Sydney', 'Sydney, Melbourne, Canberra'], ['Australia/Brisbane', 'Brisbane'], ['Australia/Adelaide', 'Adelaide'],
+      ['Australia/Perth', 'Perth'], ['Pacific/Auckland', 'Auckland, Wellington']]],
+  ];
+  const now = new Date();
+  const hora = (z: string) => { try { return new Intl.DateTimeFormat(t.locale, { timeZone: z, hour: 'numeric', minute: '2-digit' }).format(now); } catch { return ''; } };
+  const offMin = (z: string) => {
     try {
-      const p = new Intl.DateTimeFormat('en-US', { timeZone: z, timeZoneName: 'shortOffset' }).formatToParts(new Date()).find((x) => x.type === 'timeZoneName');
-      return p ? p.value.replace('GMT', 'UTC') : '';
-    } catch { return ''; }
+      const p = new Intl.DateTimeFormat('en-US', { timeZone: z, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' }).formatToParts(now);
+      const g = (k: string) => Number(p.find((x) => x.type === k)?.value);
+      return Math.round((Date.UTC(g('year'), g('month') - 1, g('day'), g('hour') % 24, g('minute')) - now.getTime()) / 60000);
+    } catch { return NaN; }
   };
-  tzSel.innerHTML = zones.map((z) => `<option value="${z}">${z.replace(/_/g, ' ')} (${offset(z)})</option>`).join('');
-  tzSel.value = guess;
+  // se o fuso detetado não está na lista, usa o da lista com a mesma hora agora (ou mostra-o à parte)
+  const known = GROUPS.flatMap(([, zs]) => zs.map(([z]) => z));
+  let initial = guess;
+  let extra = '';
+  if (!known.includes(guess)) {
+    const same = known.find((z) => offMin(z) === offMin(guess));
+    if (same) initial = same;
+    else extra = `<option value="${guess}">${guess.replace(/_/g, ' ').split('/').pop()} · ${hora(guess)}</option>`;
+  }
+  tzSel.innerHTML = (extra ? `<optgroup label="${t.tzDetected || 'Detected'}">${extra}</optgroup>` : '') +
+    GROUPS.map(([g, zs]) => `<optgroup label="${g}">${zs.map(([z, l]) => `<option value="${z}">${l} · ${hora(z)}</option>`).join('')}</optgroup>`).join('');
+  tzSel.value = initial;
 
   const tz = () => tzSel.value || 'UTC';
   const ymd = (iso: string) => new Intl.DateTimeFormat('en-CA', { timeZone: tz(), year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(iso));

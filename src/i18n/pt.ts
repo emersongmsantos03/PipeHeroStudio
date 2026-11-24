@@ -517,6 +517,8 @@ const pt = {
     lead: 'Escolha o horário que lhe dá mais jeito. Falamos sobre o seu negócio e o que lhe traria mais clientes. Sem compromisso e sem pressão.',
     points: ['15 minutos, por videochamada', 'Em português, inglês ou espanhol', 'Sai com um próximo passo claro'],
     tz: 'O seu fuso horário',
+    tzGroups: { na: 'Estados Unidos e Canadá', eu: 'Reino Unido e Europa', la: 'América Latina', oc: 'Austrália e Nova Zelândia' },
+    tzDetected: 'Detetado',
     day: 'Escolha o dia',
     time: 'Escolha a hora',
     loading: 'A carregar horários livres…',

@@ -515,6 +515,8 @@ const en: Dict = {
     lead: "Pick a time that works for you. We'll talk about your business and what would bring you more clients. No commitment, no sales pressure.",
     points: ['15 minutes, by video call', 'In English, Portuguese or Spanish', 'You leave with a clear next step'],
     tz: 'Your time zone',
+    tzGroups: { na: 'United States & Canada', eu: 'UK & Europe', la: 'Latin America', oc: 'Australia & New Zealand' },
+    tzDetected: 'Detected',
     day: 'Choose a day',
     time: 'Choose a time',
     loading: 'Loading free times…',

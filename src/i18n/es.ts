@@ -515,6 +515,8 @@ const es: Dict = {
     lead: 'Elige la hora que mejor te venga. Hablamos de tu negocio y de lo que te traería más clientes. Sin compromiso y sin presión.',
     points: ['15 minutos, por videollamada', 'En español, inglés o portugués', 'Sales con un siguiente paso claro'],
     tz: 'Tu zona horaria',
+    tzGroups: { na: 'Estados Unidos y Canadá', eu: 'Reino Unido y Europa', la: 'América Latina', oc: 'Australia y Nueva Zelanda' },
+    tzDetected: 'Detectada',
     day: 'Elige el día',
     time: 'Elige la hora',
     loading: 'Cargando horas libres…',
