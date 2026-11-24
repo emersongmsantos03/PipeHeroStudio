@@ -10,6 +10,7 @@ import * as tasks from './views/tasks.js';
 import * as reports from './views/reports.js';
 import * as templates from './views/templates.js';
 import * as activity from './views/activity.js';
+import * as traffic from './views/traffic.js';
 import { montarAva, abrirAva } from './ava.js';
 import * as prospects from './views/prospects.js';
 
@@ -22,6 +23,7 @@ const NAV = [
   { href: '#/', key: 'dashboard', label: 'Visão geral', icon: 'home' },
   { href: '#/tasks', key: 'tasks', label: 'Tarefas', icon: 'tasks', badge: () => state.tasksDue, red: true },
   { href: '#/activity', key: 'activity', label: 'Atividade', icon: 'clock' },
+  { href: '#/traffic', key: 'traffic', label: 'Tráfego do site', icon: 'globe' },
   { group: 'Vendas' },
   { href: '#/crm', key: 'crm', label: 'Pipeline', icon: 'board' },
   { href: '#/leads', key: 'leads', label: 'Leads', icon: 'list' },
@@ -45,6 +47,7 @@ const ROUTES = [
   [/^\/reports$/, 'reports', (c) => reports.render(c)],
   [/^\/finance$/, 'finance', (c) => finance.render(c)],
   [/^\/activity$/, 'activity', (c) => activity.render(c)],
+  [/^\/traffic$/, 'traffic', (c) => traffic.render(c)],
   [/^\/prospects$/, 'prospects', (c) => prospects.render(c), false, 'list'],
   [/^\/assistant$/, 'dashboard', (c) => { abrirAva(); location.hash = '#/'; }],
   [/^\/agent$/, 'agent', (c) => agent.render(c)],

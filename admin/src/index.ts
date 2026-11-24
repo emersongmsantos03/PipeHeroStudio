@@ -1346,6 +1346,37 @@ const bridgeAnswer: Handler = async ({ req, env, params }) => {
 /* ====================================================================== */
 /* Atividade geral: tudo o que acontece (e-mails, respostas, leads, acessos ao site)  */
 /* ====================================================================== */
+/* Tráfego do site pipeherostudio.digital: visitas por dia e por canal, países, páginas, horários e dispositivos. */
+const REF = `IFNULL(json_extract(meta,'$.ref'),'')`;
+const CHANNEL = `CASE WHEN ${REF} = '' THEN 'direct'
+  WHEN ${REF} LIKE '%google.%' OR ${REF} LIKE '%bing.%' OR ${REF} LIKE '%duckduckgo%' OR ${REF} LIKE '%yahoo.%' OR ${REF} LIKE '%ecosia%' OR ${REF} LIKE '%brave%' THEN 'search'
+  WHEN ${REF} LIKE '%instagram%' OR ${REF} LIKE '%facebook%' OR ${REF} LIKE '%fb.%' OR ${REF} LIKE '%linkedin%' OR ${REF} LIKE '%lnkd.in%' OR ${REF} LIKE '%t.co' OR ${REF} LIKE '%twitter%' OR ${REF} LIKE '%x.com'
+    OR ${REF} LIKE '%whatsapp%' OR ${REF} LIKE '%wa.me%' OR ${REF} LIKE '%reddit%' OR ${REF} LIKE '%pinterest%' OR ${REF} LIKE '%youtube%' OR ${REF} LIKE '%tiktok%' OR ${REF} LIKE '%quora%' OR ${REF} LIKE '%medium.com%' THEN 'social'
+  ELSE 'other' END`;
+
+const trafficStats: Handler = async ({ env, url }) => {
+  const range = url.searchParams.get('range') || '30';
+  const from = rangeStart(range);
+  const prev = range === 'all' ? null : prevRange(from);
+  const q = (sql: string, ...b: unknown[]) => env.DB.prepare(sql).bind(...(b.length ? b : [from])).all<any>().then((r) => r.results || []);
+  const PV = `FROM events WHERE type='page_view' AND created_at>=?`;
+  const [daily, countries, pages, refs, devices, hours, langs, channels, other, prevTotal] = await Promise.all([
+    q(`SELECT substr(created_at,1,10) d, ${CHANNEL} ch, COUNT(*) n ${PV} GROUP BY d, ch ORDER BY d`),
+    q(`SELECT COALESCE(json_extract(meta,'$.country'),'?') c, COUNT(*) n ${PV} GROUP BY c ORDER BY n DESC LIMIT 15`),
+    q(`SELECT ref page, COUNT(*) n ${PV} GROUP BY ref ORDER BY n DESC LIMIT 12`),
+    q(`SELECT ${REF} r, ${CHANNEL} ch, COUNT(*) n ${PV} AND ${REF} <> '' GROUP BY r ORDER BY n DESC LIMIT 12`),
+    q(`SELECT COALESCE(json_extract(meta,'$.device'),'?') dv, COUNT(*) n ${PV} GROUP BY dv ORDER BY n DESC`),
+    q(`SELECT CAST(strftime('%H', created_at, '-3 hours') AS INTEGER) h, COUNT(*) n ${PV} GROUP BY h ORDER BY h`),
+    q(`SELECT COALESCE(NULLIF(json_extract(meta,'$.lang'),''),'?') l, COUNT(*) n ${PV} GROUP BY l ORDER BY n DESC LIMIT 6`),
+    q(`SELECT ${CHANNEL} ch, COUNT(*) n ${PV} GROUP BY ch`),
+    q(`SELECT type, COUNT(*) n FROM events WHERE created_at>=? AND type IN ('form_submit','email_click','chat_message') GROUP BY type`),
+    prev ? env.DB.prepare(`SELECT COUNT(*) n FROM events WHERE type='page_view' AND created_at>=? AND created_at<?`).bind(prev.from, prev.to).first<{ n: number }>() : Promise.resolve(null),
+  ]);
+  const total = channels.reduce((a: number, r: any) => a + r.n, 0);
+  return { from, range, total, prevTotal: prev ? prevTotal?.n || 0 : null, daily, countries, pages, refs, devices, hours, langs, channels,
+    other: Object.fromEntries(other.map((r: any) => [r.type, r.n])) };
+};
+
 const activityFeed: Handler = async ({ env, url }) => {
   const from = rangeStart(url.searchParams.get('range'));
   const q = (sql: string) => env.DB.prepare(sql).bind(from).all<any>().then((r) => r.results || []);
@@ -1527,6 +1558,7 @@ const routes: [string, RegExp, Handler, Access][] = [
   ['POST', /^\/api\/ingest\/event$/, ingestEvent, 'ingest'],
   ['POST', /^\/api\/ingest\/email$/, async (c) => ingestEvent(c), 'ingest'],
   ['GET', /^\/api\/activity$/, activityFeed, 'user'],
+  ['GET', /^\/api\/traffic$/, trafficStats, 'user'],
   ['GET', /^\/api\/prospects$/, listProspects, 'user'],
   ['PATCH', /^\/api\/prospects\/(\d+)$/, updateProspect, 'user'],
   ['POST', /^\/api\/prospects\/(\d+)\/to-crm$/, prospectToCrm, 'user'],

@@ -46,9 +46,9 @@ export async function render(ctx) {
     </div>
     <div class="cols even">
       <section class="card"><div class="card-h"><h2>Páginas mais vistas</h2></div>${hbars(a.pvPages, 'page')}</section>
-      <section class="card"><div class="card-h"><h2>De onde vêm</h2></div>${hbars(a.pvRefs, 'r')}
-        <div class="card-h" style="margin-top:18px"><h2>Países</h2></div>${hbars(a.pvCountries, 'c')}
-        <div class="card-h" style="margin-top:18px"><h2>Dispositivos</h2></div>${hbars(a.pvDevices, 'dv', (v) => esc(v === 'mobile' ? 'Telemóvel' : v === 'desktop' ? 'Computador' : v))}</section>
+      <section class="card"><div class="card-h"><h2>De onde vêm</h2></div>${hbars(a.pvRefs, 'r', origemNome)}
+        <div class="card-h" style="margin-top:18px"><h2>Países</h2></div>${hbars(a.pvCountries, 'c', paisNome)}
+        <div class="card-h" style="margin-top:18px"><h2>Dispositivos</h2></div>${hbars(a.pvDevices, 'dv', (v) => esc(v === 'mobile' ? 'Celular' : v === 'desktop' ? 'Computador' : v))}</section>
     </div>
     <section class="card">
       <div class="card-h"><h2>Linha do tempo</h2><span class="muted">últimos 300 acontecimentos</span>
@@ -71,9 +71,26 @@ export async function render(ctx) {
       const [ic, label] = TYPE[e.type] || ['spark', e.type];
       const detail = [m.subject && `"${m.subject}"`, m.summary, m.error].filter(Boolean).join(' · ');
       const who = e.lead_id ? `<a href="#/leads/${e.lead_id}">${esc(e.lead_name || e.business || 'Lead #' + e.lead_id)}</a>` : esc(e.ref || '');
-      return `<div class="list-item"><span class="li-main"><span class="li-title">${icon(ic)} ${esc(label)} <span class="muted" style="font-weight:400">· ${esc(SRC[e.source] || e.source || '')}${m.agent ? ' (' + esc(m.agent) + ')' : ''}</span></span><span class="li-sub">${who}${detail ? ' — ' + esc(detail).slice(0, 220) : ''}</span></span><span class="li-end nowrap">${dateTime(e.created_at)}</span></div>`;
+      return `<div class="list-item"><span class="li-main"><span class="li-title"><span class="type-ico">${icon(ic)}</span> ${esc(label)} <span class="muted" style="font-weight:400">· ${esc(SRC[e.source] || e.source || '')}${m.agent ? ' (' + esc(m.agent) + ')' : ''}</span></span><span class="li-sub">${who}${detail ? ' — ' + esc(detail).slice(0, 220) : ''}</span></span><span class="li-end nowrap">${dateTime(e.created_at)}</span></div>`;
     }).join('') : '<div class="empty"><b>Nada no período.</b>Os e-mails do prospector, respostas, formulários e leads aparecem aqui.</div>';
   };
   draw('');
   ctx.page.querySelector('[data-f]').addEventListener('change', (e) => draw(e.target.value));
+}
+
+let _dn = null;
+/** "BR" -> "🇧🇷 Brasil" */
+function paisNome(c) {
+  if (!c || c === '?' || c.length !== 2) return esc(c === '?' ? 'Desconhecido' : c || 'Desconhecido');
+  try { _dn ||= new Intl.DisplayNames(['pt-BR'], { type: 'region' }); } catch { /* sem suporte */ }
+  const flag = String.fromCodePoint(...[...c.toUpperCase()].map((x) => 0x1f1a5 + x.charCodeAt(0)));
+  return `${flag} ${esc((_dn && _dn.of(c.toUpperCase())) || c)}`;
+}
+/** origem da visita: domínio de onde a pessoa veio, com nome amigável */
+function origemNome(r) {
+  if (!r || r === '(direto)') return 'Direto (digitou o endereço, favoritos ou app)';
+  const m = [[/google\./, 'Google'], [/bing\./, 'Bing'], [/duckduckgo/, 'DuckDuckGo'], [/(^|\.)instagram\.com|l\.instagram/, 'Instagram'], [/facebook\.com|fb\.com|l\.facebook/, 'Facebook'],
+    [/linkedin|lnkd\.in/, 'LinkedIn'], [/t\.co$|twitter|x\.com/, 'X / Twitter'], [/whatsapp|wa\.me/, 'WhatsApp'], [/zoho|mail\.|outlook|gmail/, 'E-mail'], [/reddit/, 'Reddit'], [/upwork/, 'Upwork'], [/chatgpt|openai|perplexity|claude/, 'IA (ChatGPT, Perplexity…)']];
+  const hit = m.find(([re]) => re.test(r));
+  return esc(hit ? `${hit[1]} · ${r}` : r);
 }
