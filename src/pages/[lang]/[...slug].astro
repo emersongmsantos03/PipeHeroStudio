@@ -6,6 +6,7 @@ import Clinics from '../../views/Clinics.astro';
 import Crm from '../../views/Crm.astro';
 import Agents from '../../views/Agents.astro';
 import Contact from '../../views/Contact.astro';
+import Book from '../../views/Book.astro';
 import Legal from '../../views/Legal.astro';
 import NotFound from '../../views/NotFound.astro';
 
@@ -26,5 +27,6 @@ const { lang, key } = Astro.props as { lang: Lang; key: PageKey };
 {key === 'crm' && <Crm lang={lang} />}
 {key === 'agents' && <Agents lang={lang} />}
 {key === 'contact' && <Contact lang={lang} />}
+{key === 'book' && <Book lang={lang} />}
 {(key === 'privacy' || key === 'terms' || key === 'cookies') && <Legal lang={lang} page={key} />}
 {key === 'notFound' && <NotFound lang={lang} />}

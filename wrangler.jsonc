@@ -32,7 +32,10 @@
   ],
 
   // Limite do chat por visitante (IP): 15 mensagens por minuto.
-  "ratelimits": [{ "name": "CHAT_RL", "namespace_id": "1001", "simple": { "limit": 15, "period": 60 } }],
+  "ratelimits": [
+    { "name": "CHAT_RL", "namespace_id": "1001", "simple": { "limit": 15, "period": 60 } },
+    { "name": "BOOK_RL", "namespace_id": "1005", "simple": { "limit": 6, "period": 60 } }
+  ],
 
   // OPENAI_API_KEY é um segredo (npx wrangler secret put OPENAI_API_KEY). Nunca no código.
   // CONTACT_TO e OPENAI_MODEL (opcionais) podem ser definidos no painel: Settings → Variables. Não são apagados nos deploys.

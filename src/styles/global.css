@@ -331,6 +331,8 @@ a { color: inherit; }
 .nav-main a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px; text-decoration: none; font-size: 0.95rem; color: var(--muted); border-radius: 8px; }
 .nav-main a:hover { color: var(--ink); }
 .nav-main a[aria-current='page'] { color: var(--ink); box-shadow: inset 0 -2px 0 var(--hero); border-radius: 0; }
+.nav-main a.nav-cta { margin-left: 6px; background: var(--hero); color: var(--on-hero, #10182b); font-weight: 600; border-radius: 8px; box-shadow: none; }
+.nav-main a.nav-cta:hover { filter: brightness(.96); color: var(--on-hero, #10182b); }
 
 /* Menus que abrem (idioma e menu do telemóvel) */
 .hdr-pop { position: relative; flex: none; }

@@ -167,6 +167,49 @@ export async function renderIntegrations(ctx) {
     const r = await api('/settings/import-kv', { method: 'POST' });
     toast(r.imported ? `${r.imported} lead${r.imported > 1 ? 's' : ''} importado${r.imported > 1 ? 's' : ''}` : 'Nada novo para importar');
   }));
+  instagramCard(ctx);
+}
+
+/* ---------- Instagram ---------- */
+async function instagramCard(ctx) {
+  let ig = { connected: false };
+  try { ig = await api('/instagram'); } catch { /* tabela ainda não criada */ }
+  if (ctx.stale()) return;
+  const sec = document.createElement('section');
+  sec.className = 'card stack';
+  sec.innerHTML = ig.connected
+    ? `<div class="card-h" style="margin:0"><h2>Instagram</h2><span class="badge won">ligado</span>${ig.username ? `<span class="muted">@${esc(ig.username)}</span>` : ''}</div>
+       <p class="muted" style="margin:0">Seguidores, alcance, visitas ao perfil e cliques no link são lidos uma vez por dia e aparecem em <a href="#/traffic">Tráfego do site</a>. O token renova sozinho.</p>
+       ${ig.error ? `<p class="notice err">${icon('alert')}<span>Última leitura falhou: ${esc(ig.error)}</span></p>` : ''}
+       <div class="row" style="gap:8px"><button class="btn" data-ig-sync>${icon('refresh')}Atualizar agora</button><button class="btn danger" data-ig-off>Desligar</button></div>`
+    : `<div class="card-h" style="margin:0"><h2>Instagram</h2><span class="badge">não ligado</span></div>
+       <p class="muted" style="margin:0">Ligue o @pipehero.studio para ver seguidores, alcance, visitas ao perfil e cliques no link no painel.</p>
+       <ol class="steps">
+         <li>No app do Instagram: <b>Configurações › Tipo de conta</b> → mude para <b>Conta profissional</b> (Empresa ou Criador de conteúdo). É grátis.</li>
+         <li>Em <a href="https://developers.facebook.com/apps" target="_blank" rel="noopener">developers.facebook.com/apps</a>: <b>Criar app</b> → caso de uso <b>"Gerenciar mensagens e conteúdo no Instagram"</b>.</li>
+         <li>No app: <b>API do Instagram › Configuração da API com login do Instagram</b> → <b>Adicionar conta</b> (entre com o @pipehero.studio) → <b>Gerar token</b>.</li>
+         <li>Copie o token e cole aqui embaixo. Ele fica guardado só no painel e nunca é mostrado de novo.</li>
+       </ol>
+       <form class="row" data-ig-form style="gap:8px"><input class="input" type="password" name="token" placeholder="Token do Instagram (começa com IG…)" autocomplete="off" required style="flex:1;min-width:220px"><button class="btn primary" type="submit">Ligar Instagram</button></form>`;
+  ctx.page.append(sec);
+  sec.querySelector('[data-ig-form]')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = e.currentTarget.querySelector('[type=submit]');
+    btn.disabled = true;
+    try {
+      const r = await api('/instagram/token', { method: 'POST', body: { token: e.currentTarget.token.value } });
+      toast(`Instagram ligado: @${r.username}`);
+      ctx.refresh();
+    } catch (err) { fail(err); btn.disabled = false; }
+  });
+  sec.querySelector('[data-ig-sync]')?.addEventListener('click', async (e) => {
+    e.currentTarget.disabled = true;
+    try { const r = await api('/instagram/sync', { method: 'POST' }); toast(r.ok ? 'Números do Instagram atualizados' : `Não consegui ler: ${r.reason}`, !r.ok); ctx.refresh(); } catch (err) { fail(err); }
+  });
+  sec.querySelector('[data-ig-off]')?.addEventListener('click', async () => {
+    if (!(await confirmBox('Desligar Instagram', 'O painel deixa de ler os números do Instagram. O histórico já guardado fica.', 'Desligar'))) return;
+    try { await api('/instagram', { method: 'DELETE' }); toast('Instagram desligado'); ctx.refresh(); } catch (err) { fail(err); }
+  });
 }
 
 const curlLead = (ep, key) => `curl -X POST ${ep}/lead \\

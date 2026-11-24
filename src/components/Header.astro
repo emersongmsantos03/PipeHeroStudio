@@ -7,12 +7,13 @@ import { LOCALE, href, type Lang, type PageKey } from '../i18n/routes';
 interface Props { lang: Lang; page: PageKey }
 const { lang, page } = Astro.props;
 const d = t(lang);
-const nav: { key: PageKey; label: string }[] = [
+const nav: { key: PageKey; label: string; cta?: boolean }[] = [
   { key: 'sites', label: d.ui.nav.sites },
   { key: 'crm', label: d.ui.nav.crm },
   { key: 'agents', label: d.ui.nav.agents },
   { key: 'clinics', label: d.ui.nav.clinics },
   { key: 'contact', label: d.ui.nav.contact },
+  { key: 'book', label: d.ui.nav.book, cta: true },
 ];
 const langPage: PageKey = page === 'notFound' ? 'home' : page;
 
@@ -35,7 +36,7 @@ const cur = LANG_INFO[lang];
     <nav class="nav-main" aria-label={d.ui.navLabel}>
       <ul>
         {nav.map((n) => (
-          <li><a href={href(lang, n.key)} aria-current={page === n.key ? 'page' : undefined}>{n.label}</a></li>
+          <li><a href={href(lang, n.key)} class={n.cta ? 'nav-cta' : undefined} aria-current={page === n.key ? 'page' : undefined}>{n.label}</a></li>
         ))}
       </ul>
     </nav>

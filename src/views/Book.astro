@@ -1,0 +1,108 @@
+---
+/**
+ * Marcar uma chamada de 15 minutos. A pessoa escolhe o fuso, o dia e a hora; os horários livres vêm de /api/slots
+ * (regras definidas no painel, em Agenda) e a marcação vai para /api/book (cria o lead, a tarefa e envia a confirmação).
+ */
+import Base from '../layouts/Base.astro';
+import Station from '../components/Station.astro';
+import { t, fill } from '../i18n';
+import { href, LOCALE, type Lang } from '../i18n/routes';
+import { config } from '../config';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const d = t(lang);
+const b = d.book;
+const i18n = { ...b, fail: fill(b.fail, { email: config.email }), locale: LOCALE[lang] === 'en' ? 'en-US' : LOCALE[lang], lang };
+---
+<Base lang={lang} page="book" title={b.title} description={b.description}>
+  <div class="line wrap">
+    <Station side="left" name={b.nav} labelledby="bk-title" start end>
+      <div class="form-split">
+        <div class="st-text">
+          <h1 id="bk-title">{b.h1}</h1>
+          <p class="lead">{b.lead}</p>
+          <ul class="ticks">{b.points.map((p) => <li>{p}</li>)}</ul>
+          <p class="muted">{b.alt} <a class="link" href={href(lang, 'contact')}>{b.altLink}</a></p>
+        </div>
+
+        <div class="bk panel" data-book data-i18n={JSON.stringify(i18n)}>
+          <div class="bk-step" data-step="pick">
+            <label class="bk-l" for="bk-tz">{b.tz}</label>
+            <select id="bk-tz" class="bk-tz" data-tz></select>
+            <p class="bk-l">{b.day}</p>
+            <div class="bk-days" role="listbox" aria-label={b.day} data-days><p class="muted">{b.loading}</p></div>
+            <p class="bk-l">{b.time}</p>
+            <div class="bk-times" data-times aria-live="polite"></div>
+          </div>
+
+          <form class="bk-step" data-step="form" hidden novalidate>
+            <div class="bk-when"><span data-when></span><button type="button" class="link bk-change" data-back>{b.change}</button></div>
+            <p class="bk-l">{b.details}</p>
+            <div class="form-grid">
+              <div class="field"><label for="bk-name">{b.name} <span aria-hidden="true">*</span></label><input id="bk-name" name="name" autocomplete="name" required maxlength="120" /></div>
+              <div class="field"><label for="bk-email">{b.email} <span aria-hidden="true">*</span></label><input id="bk-email" name="email" type="email" autocomplete="email" inputmode="email" required maxlength="160" /></div>
+              <div class="field"><label for="bk-biz">{b.business} <span aria-hidden="true">*</span></label><input id="bk-biz" name="business" autocomplete="organization" required maxlength="160" /></div>
+              <div class="field"><label for="bk-phone">{b.phone} <span class="opt">({b.optional})</span></label><input id="bk-phone" name="phone" type="tel" autocomplete="tel" maxlength="40" /></div>
+              <div class="field field-full"><label for="bk-notes">{b.notes} <span class="opt">({b.optional})</span></label><textarea id="bk-notes" name="notes" rows="3" maxlength="2000" placeholder={b.notesPh}></textarea></div>
+            </div>
+            <p hidden><label>Website <input name="website" tabindex="-1" autocomplete="off" /></label></p>
+            <p class="bk-err" role="alert" data-err></p>
+            <button type="submit" class="btn btn-hero" data-submit>{b.confirm}</button>
+          </form>
+
+          <div class="bk-step bk-done" data-step="done" hidden tabindex="-1">
+            <span class="success-mark" aria-hidden="true"></span>
+            <p class="h2" data-done-title></p>
+            <p class="bk-when" data-done-when></p>
+            <p class="muted" data-done-text></p>
+            <div class="bk-cal"><a class="btn" data-gcal target="_blank" rel="noopener">{b.gcal}</a><a class="btn" data-ics download="pipehero-call.ics">{b.ics}</a></div>
+          </div>
+        </div>
+      </div>
+    </Station>
+  </div>
+</Base>
+
+<script>
+  import '../scripts/book';
+</script>
+
+<style is:global>
+  .bk { padding: clamp(20px, 3vw, 30px); display: grid; gap: 14px; }
+  .bk-step { display: grid; gap: 12px; }
+  .bk-l { font-weight: 600; margin: 6px 0 0; font-size: 0.95rem; }
+  .bk-tz { width: 100%; min-height: 46px; padding: 10px 12px; background: var(--bg); border: 1.5px solid var(--line-strong); border-radius: 8px; }
+  .bk-days { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 8px; scroll-snap-type: x proximity; }
+  .bk-day { flex: none; scroll-snap-align: start; display: grid; justify-items: center; gap: 2px; min-width: 64px; padding: 10px 8px; border-radius: 10px;
+    border: 1.5px solid var(--line-strong); background: var(--bg); cursor: pointer; font: inherit; color: inherit; }
+  .bk-day small { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .bk-day b { font-size: 1.15rem; }
+  .bk-day[aria-selected='true'] { border-color: var(--ink); background: var(--hero); color: var(--on-hero); }
+  .bk-day[aria-selected='true'] small { color: var(--on-hero); }
+  .bk-times { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
+  .bk-time { min-height: 44px; border-radius: 8px; border: 1.5px solid var(--line-strong); background: var(--bg); cursor: pointer; font: 600 0.95rem var(--f-body, inherit); color: inherit; }
+  .bk-time:hover, .bk-day:hover { border-color: var(--ink); }
+  .bk-day:focus-visible, .bk-time:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--hero) 70%, transparent); }
+  .bk-when { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-weight: 600; padding: 12px 14px; border-radius: 10px;
+    background: color-mix(in srgb, var(--hero) 22%, var(--surface)); border: 1px solid color-mix(in srgb, var(--hero) 60%, transparent); }
+  .bk-change { background: none; border: 0; padding: 0; cursor: pointer; font: inherit; font-weight: 500; }
+  .bk-err { color: var(--danger); font-weight: 500; margin: 0; }
+  .bk-err:empty { display: none; }
+  .bk-done { justify-items: start; }
+  .bk-done:focus { outline: none; }
+  .bk-cal { display: flex; flex-wrap: wrap; gap: 10px; }
+  .bk .btn-hero { justify-self: start; }
+  /* campos (iguais aos do formulário de contacto) */
+  .bk .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; }
+  .bk .field { display: grid; gap: 6px; align-content: start; }
+  .bk .field-full { grid-column: 1 / -1; }
+  .bk .field label { font-weight: 500; font-size: 0.95rem; }
+  .bk .field .opt { font-weight: 400; color: var(--muted); }
+  .bk .field input, .bk .field textarea { width: 100%; min-height: 46px; padding: 10px 13px; background: var(--bg); border: 1.5px solid var(--line-strong); border-radius: 8px; font: inherit; color: inherit; }
+  .bk .field textarea { resize: vertical; min-height: 96px; }
+  .bk .field input:focus-visible, .bk .field textarea:focus-visible, .bk-tz:focus-visible { outline: none; border-color: var(--ink); box-shadow: 0 0 0 3px color-mix(in srgb, var(--hero) 70%, transparent); }
+  .bk .success-mark { width: 44px; height: 44px; border-radius: 12px; background: var(--hero); position: relative; }
+  .bk .success-mark::after { content: ''; position: absolute; left: 15px; top: 9px; width: 10px; height: 19px; border: solid var(--on-hero); border-width: 0 3px 3px 0; transform: rotate(45deg); }
+  @media (max-width: 640px) { .bk .form-grid { grid-template-columns: minmax(0, 1fr); } }
+</style>

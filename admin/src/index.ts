@@ -24,6 +24,7 @@ import {
   ADMIN_URL, LEAD_FIELDS, QUALS, SOURCES, STAGES, addActivity, escHtml, logEvent, now, saveLead, sendMail, type LeadInput,
 } from '../../shared/crm';
 import { emailLayout, sendDigest } from './digest';
+import { DEFAULT_RULES, brt as brtOf, freeSlots, loadRules, normalizeRules } from '../../shared/booking';
 import { FROM, STAGE_LABEL, getSetting, notifyTo, setSetting, type AppEnv } from './common';
 
 const CURRENCIES = ['EUR', 'USD', 'BRL', 'GBP'];
@@ -1346,6 +1347,150 @@ const bridgeAnswer: Handler = async ({ req, env, params }) => {
 /* ====================================================================== */
 /* Atividade geral: tudo o que acontece (e-mails, respostas, leads, acessos ao site)  */
 /* ====================================================================== */
+/* ====================================================================== */
+/* Agenda: chamadas marcadas pelo site                                    */
+/* ====================================================================== */
+const listBookings: Handler = async ({ env, url }) => {
+  const scope = url.searchParams.get('scope') === 'past' ? 'past' : 'upcoming';
+  const cut = new Date(Date.now() - 30 * 60e3).toISOString();
+  const sql = scope === 'past'
+    ? `SELECT b.*, l.name lead_name, l.stage lead_stage FROM bookings b LEFT JOIN leads l ON l.id = b.lead_id WHERE b.start_at < ? OR b.status <> 'confirmed' ORDER BY b.start_at DESC LIMIT 100`
+    : `SELECT b.*, l.name lead_name, l.stage lead_stage FROM bookings b LEFT JOIN leads l ON l.id = b.lead_id WHERE b.start_at >= ? AND b.status = 'confirmed' ORDER BY b.start_at LIMIT 200`;
+  const [rows, stats] = await Promise.all([
+    env.DB.prepare(sql).bind(cut).all<any>().then((r) => r.results || []),
+    env.DB.prepare(`SELECT
+        SUM(CASE WHEN status='confirmed' AND start_at >= ? THEN 1 ELSE 0 END) upcoming,
+        SUM(CASE WHEN status='confirmed' AND start_at >= ? AND start_at < ? THEN 1 ELSE 0 END) week,
+        SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) last30,
+        SUM(CASE WHEN status='done' THEN 1 ELSE 0 END) done,
+        SUM(CASE WHEN status='no_show' THEN 1 ELSE 0 END) no_show
+      FROM bookings`).bind(cut, cut, new Date(Date.now() + 7 * 864e5).toISOString(), new Date(Date.now() - 30 * 864e5).toISOString()).first<any>(),
+  ]);
+  return { scope, rows, stats: stats || {} };
+};
+
+const updateBooking: Handler = async ({ req, env, params, user }) => {
+  const id = intId(params[0]);
+  const b = await readBody(req);
+  const status = str(b.status, 20);
+  if (!['cancelled', 'done', 'no_show', 'confirmed'].includes(status)) throw new HttpError(400, 'validation', 'Estado inválido.');
+  const bk = await env.DB.prepare('SELECT * FROM bookings WHERE id = ?').bind(id).first<any>();
+  if (!bk) throw new HttpError(404, 'not_found');
+  if (status === 'confirmed' && bk.status === 'cancelled') {
+    const clash = await env.DB.prepare(`SELECT 1 FROM bookings WHERE status='confirmed' AND start_at = ? AND id <> ?`).bind(bk.start_at, id).first();
+    if (clash) throw new HttpError(409, 'taken', 'Esse horário já foi ocupado por outra marcação.');
+  }
+  await env.DB.prepare(`UPDATE bookings SET status = ?, cancelled_at = CASE WHEN ? = 'cancelled' THEN ? ELSE cancelled_at END WHERE id = ?`).bind(status, status, now(), id).run();
+  const when = brtOf(bk.start_at);
+  const label = { cancelled: 'cancelada', done: 'feita', no_show: 'pessoa não apareceu', confirmed: 'reativada' }[status];
+  if (bk.task_id && (status === 'cancelled' || status === 'done' || status === 'no_show')) {
+    await env.DB.prepare(`UPDATE tasks SET done_at = COALESCE(done_at, ?) WHERE id = ?`).bind(now(), bk.task_id).run();
+  }
+  if (bk.lead_id) {
+    await addActivity(env.DB, bk.lead_id, 'meeting', `Chamada de ${when.date.split('-').reverse().join('/')} às ${when.time} (Brasília): ${label}`, user.id);
+    await syncNextAction(env.DB, bk.lead_id);
+  }
+  return { ok: true };
+};
+
+const getBookingRules: Handler = async ({ env }) => {
+  const rules = await loadRules(env.DB);
+  const free = await freeSlots(env.DB, rules).catch(() => []);
+  return { rules, defaults: DEFAULT_RULES, freeCount: free.length, nextFree: free[0] || null };
+};
+
+const putBookingRules: Handler = async ({ req, env }) => {
+  const rules = normalizeRules(await readBody(req));
+  if (rules.minutes > 0 && rules.days.length === 0) throw new HttpError(400, 'validation', 'Escolha pelo menos um dia da semana.');
+  await setSetting(env.DB, 'booking', JSON.stringify(rules));
+  return { ok: true, rules };
+};
+
+/* ====================================================================== */
+/* Instagram (@pipehero.studio): números diários pela API oficial          */
+/* ====================================================================== */
+// O token (gerado no painel de desenvolvedor da Meta) fica só na tabela settings; nunca volta para o navegador.
+const IG = 'https://graph.instagram.com/v21.0';
+const IG_METRICS = ['reach', 'views', 'profile_views', 'website_clicks', 'accounts_engaged', 'total_interactions'];
+
+async function igGet(path: string, token: string) {
+  const sep = path.includes('?') ? '&' : '?';
+  const r = await fetch(`${path.startsWith('http') ? path : IG + path}${sep}access_token=${encodeURIComponent(token)}`);
+  const j: any = await r.json().catch(() => ({}));
+  if (!r.ok || j.error) throw new Error(j?.error?.message || `Instagram respondeu ${r.status}`);
+  return j;
+}
+
+async function syncInstagram(env: AppEnv) {
+  let token = await getSetting(env.DB, 'ig_token');
+  if (!token) return { ok: false, reason: 'not_connected' };
+  try {
+    // o token dura 60 dias: renova sozinho a partir dos 40
+    const at = await getSetting(env.DB, 'ig_token_at');
+    if (!at || Date.now() - Date.parse(at) > 40 * 864e5) {
+      const r = await igGet('https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token', token).catch(() => null);
+      if (r?.access_token) { token = r.access_token as string; await setSetting(env.DB, 'ig_token', token); await setSetting(env.DB, 'ig_token_at', now()); }
+    }
+    const me = await igGet('/me?fields=user_id,username,followers_count,media_count', token);
+    await setSetting(env.DB, 'ig_user', String(me.username || ''));
+    const d = new Date(); d.setUTCHours(0, 0, 0, 0);
+    const today = d.toISOString().slice(0, 10);
+    const since = Math.floor(d.getTime() / 1000) - 86400, until = Math.floor(d.getTime() / 1000);
+    const yday = new Date((since) * 1000).toISOString().slice(0, 10);
+    const vals: Record<string, number | null> = {};
+    await Promise.all(IG_METRICS.map(async (m) => {
+      try {
+        const r = await igGet(`/me/insights?metric=${m}&period=day&metric_type=total_value&since=${since}&until=${until}`, token!);
+        vals[m] = Number(r?.data?.[0]?.total_value?.value ?? 0);
+      } catch { vals[m] = null; }
+    }));
+    await env.DB.batch([
+      env.DB.prepare(`INSERT INTO ig_daily (day, followers, media, fetched_at) VALUES (?, ?, ?, ?)
+        ON CONFLICT(day) DO UPDATE SET followers = excluded.followers, media = excluded.media, fetched_at = excluded.fetched_at`).bind(today, me.followers_count ?? null, me.media_count ?? null, now()),
+      env.DB.prepare(`INSERT INTO ig_daily (day, reach, views, profile_views, website_clicks, accounts_engaged, interactions, fetched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(day) DO UPDATE SET reach = excluded.reach, views = excluded.views, profile_views = excluded.profile_views, website_clicks = excluded.website_clicks,
+        accounts_engaged = excluded.accounts_engaged, interactions = excluded.interactions, fetched_at = excluded.fetched_at`)
+        .bind(yday, vals.reach, vals.views, vals.profile_views, vals.website_clicks, vals.accounts_engaged, vals.total_interactions, now()),
+    ]);
+    await setSetting(env.DB, 'ig_error', '');
+    return { ok: true, username: me.username, followers: me.followers_count };
+  } catch (e) {
+    await setSetting(env.DB, 'ig_error', String((e as Error).message || e).slice(0, 300));
+    return { ok: false, reason: String((e as Error).message || e) };
+  }
+}
+
+const getInstagram: Handler = async ({ env, url }) => {
+  const from = rangeStart(url.searchParams.get('range')).slice(0, 10);
+  const [token, user, err, rows, last] = await Promise.all([
+    getSetting(env.DB, 'ig_token'), getSetting(env.DB, 'ig_user'), getSetting(env.DB, 'ig_error'),
+    env.DB.prepare('SELECT * FROM ig_daily WHERE day >= ? ORDER BY day').bind(from).all<any>().then((r) => r.results || []).catch(() => []),
+    env.DB.prepare('SELECT * FROM ig_daily WHERE followers IS NOT NULL ORDER BY day DESC LIMIT 1').first<any>().catch(() => null),
+  ]);
+  return { connected: !!token, username: user || null, error: err || null, rows, last, from };
+};
+
+const connectInstagram: Handler = async ({ req, env }) => {
+  const b = await readBody(req);
+  const token = str(b.token, 600).replace(/\s+/g, '');
+  if (token.length < 20) throw new HttpError(400, 'validation', 'Cole o token completo gerado no painel da Meta.');
+  let me: any;
+  try { me = await igGet('/me?fields=user_id,username,account_type', token); }
+  catch (e) { throw new HttpError(400, 'ig_invalid', `O Instagram recusou o token: ${(e as Error).message}`); }
+  await setSetting(env.DB, 'ig_token', token);
+  await setSetting(env.DB, 'ig_token_at', now());
+  await setSetting(env.DB, 'ig_user', String(me.username || ''));
+  const r = await syncInstagram(env);
+  return { ok: true, username: me.username, accountType: me.account_type, sync: r };
+};
+
+const disconnectInstagram: Handler = async ({ env }) => {
+  await env.DB.prepare(`DELETE FROM settings WHERE key IN ('ig_token','ig_token_at','ig_error')`).run();
+  return { ok: true };
+};
+
+const syncInstagramNow: Handler = async ({ env }) => syncInstagram(env);
+
 /* Tráfego do site pipeherostudio.digital: visitas por dia e por canal, países, páginas, horários e dispositivos. */
 const REF = `IFNULL(json_extract(meta,'$.ref'),'')`;
 const CHANNEL = `CASE WHEN ${REF} = '' THEN 'direct'
@@ -1360,7 +1505,7 @@ const trafficStats: Handler = async ({ env, url }) => {
   const prev = range === 'all' ? null : prevRange(from);
   const q = (sql: string, ...b: unknown[]) => env.DB.prepare(sql).bind(...(b.length ? b : [from])).all<any>().then((r) => r.results || []);
   const PV = `FROM events WHERE type='page_view' AND created_at>=?`;
-  const [daily, countries, pages, refs, devices, hours, langs, channels, other, prevTotal] = await Promise.all([
+  const [daily, countries, pages, refs, devices, hours, langs, channels, other, igVisits, prevTotal] = await Promise.all([
     q(`SELECT substr(created_at,1,10) d, ${CHANNEL} ch, COUNT(*) n ${PV} GROUP BY d, ch ORDER BY d`),
     q(`SELECT COALESCE(json_extract(meta,'$.country'),'?') c, COUNT(*) n ${PV} GROUP BY c ORDER BY n DESC LIMIT 15`),
     q(`SELECT ref page, COUNT(*) n ${PV} GROUP BY ref ORDER BY n DESC LIMIT 12`),
@@ -1370,11 +1515,12 @@ const trafficStats: Handler = async ({ env, url }) => {
     q(`SELECT COALESCE(NULLIF(json_extract(meta,'$.lang'),''),'?') l, COUNT(*) n ${PV} GROUP BY l ORDER BY n DESC LIMIT 6`),
     q(`SELECT ${CHANNEL} ch, COUNT(*) n ${PV} GROUP BY ch`),
     q(`SELECT type, COUNT(*) n FROM events WHERE created_at>=? AND type IN ('form_submit','email_click','chat_message') GROUP BY type`),
+    q(`SELECT COUNT(*) n ${PV} AND ${REF} LIKE '%instagram%'`),
     prev ? env.DB.prepare(`SELECT COUNT(*) n FROM events WHERE type='page_view' AND created_at>=? AND created_at<?`).bind(prev.from, prev.to).first<{ n: number }>() : Promise.resolve(null),
   ]);
   const total = channels.reduce((a: number, r: any) => a + r.n, 0);
   return { from, range, total, prevTotal: prev ? prevTotal?.n || 0 : null, daily, countries, pages, refs, devices, hours, langs, channels,
-    other: Object.fromEntries(other.map((r: any) => [r.type, r.n])) };
+    other: Object.fromEntries(other.map((r: any) => [r.type, r.n])), igVisits: igVisits[0]?.n || 0 };
 };
 
 const activityFeed: Handler = async ({ env, url }) => {
@@ -1559,6 +1705,14 @@ const routes: [string, RegExp, Handler, Access][] = [
   ['POST', /^\/api\/ingest\/email$/, async (c) => ingestEvent(c), 'ingest'],
   ['GET', /^\/api\/activity$/, activityFeed, 'user'],
   ['GET', /^\/api\/traffic$/, trafficStats, 'user'],
+  ['GET', /^\/api\/bookings$/, listBookings, 'user'],
+  ['PATCH', /^\/api\/bookings\/(\d+)$/, updateBooking, 'user'],
+  ['GET', /^\/api\/booking-rules$/, getBookingRules, 'user'],
+  ['PATCH', /^\/api\/booking-rules$/, putBookingRules, 'admin'],
+  ['GET', /^\/api\/instagram$/, getInstagram, 'user'],
+  ['POST', /^\/api\/instagram\/sync$/, syncInstagramNow, 'user'],
+  ['POST', /^\/api\/instagram\/token$/, connectInstagram, 'admin'],
+  ['DELETE', /^\/api\/instagram$/, disconnectInstagram, 'admin'],
   ['GET', /^\/api\/prospects$/, listProspects, 'user'],
   ['PATCH', /^\/api\/prospects\/(\d+)$/, updateProspect, 'user'],
   ['POST', /^\/api\/prospects\/(\d+)\/to-crm$/, prospectToCrm, 'user'],
@@ -1632,6 +1786,7 @@ export default {
       (async () => {
         await env.DB.prepare('DELETE FROM sessions WHERE expires_at < ?').bind(now()).run();
         await sendDigest(env, { force: false });
+        await syncInstagram(env).catch(() => null);
       })(),
     );
   },

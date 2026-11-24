@@ -33,7 +33,6 @@ const graph = {
       logo: absolute('/apple-touch-icon.png'),
       slogan: d.brandLine,
       founder: { '@type': 'Person', name: config.founder },
-      sameAs: [`https://www.instagram.com/${config.instagram}/`],
     },
     {
       '@type': 'WebPage',
@@ -95,7 +94,8 @@ const chatOn = config.chatEnabled;
         if (a) { try { localStorage.setItem('phs-lang', a.getAttribute('data-lang')); } catch (_) {} }
       });
       try {
-        var pv = JSON.stringify({ p: location.pathname, r: document.referrer, l: document.documentElement.lang });
+        var qs = new URLSearchParams(location.search);
+        var pv = JSON.stringify({ p: location.pathname, r: document.referrer, l: document.documentElement.lang, u: qs.get('utm_source') || qs.get('ref') || '' });
         if (navigator.sendBeacon) navigator.sendBeacon('/api/pv', pv);
         else fetch('/api/pv', { method: 'POST', body: pv, keepalive: true });
       } catch (_) {}

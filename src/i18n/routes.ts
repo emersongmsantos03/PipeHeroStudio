@@ -17,6 +17,7 @@ export const ROUTES = {
   crm: { pt: 'automacao-crm', en: 'crm-automation', es: 'automatizacion-crm' },
   agents: { pt: 'agentes-ia', en: 'ai-agents', es: 'agentes-ia' },
   contact: { pt: 'contacto', en: 'contact', es: 'contacto' },
+  book: { pt: 'marcar', en: 'book', es: 'reservar' },
   privacy: { pt: 'privacidade', en: 'privacy', es: 'privacidad' },
   terms: { pt: 'termos', en: 'terms', es: 'terminos' },
   cookies: { pt: 'cookies', en: 'cookies', es: 'cookies' },

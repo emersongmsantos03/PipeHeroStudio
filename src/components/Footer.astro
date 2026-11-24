@@ -31,7 +31,7 @@ const wa = config.whatsapp.replace(/\D/g, '');
         <ul>
           <li><a class="link" href={href(lang, 'contact')}>{d.ui.nav.contact}</a></li>
           <li><a class="link" href={`mailto:${config.email}`}>{config.email}</a></li>
-          <li><a class="link" href={`https://www.instagram.com/${config.instagram}/`} rel="noopener">@{config.instagram}</a></li>
+          <li><a class="link" href={href(lang, 'book')}>{d.ui.nav.book}</a></li>
           {wa && <li><a class="link" href={`https://wa.me/${wa}`} rel="noopener">WhatsApp</a></li>}
         </ul>
       </div>

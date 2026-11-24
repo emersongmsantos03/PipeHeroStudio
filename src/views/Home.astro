@@ -57,7 +57,7 @@ const sides = ['left', 'right', 'left', 'right'] as const;
     <div class="hero-text">
       <p class="tag">{d.hero.eyebrow}</p>
       <h1 id="hero-title">{d.hero.title}</h1>
-      <p class="lead">{d.brandLine}</p>
+      <p class="lead">{fill(d.hero.lead, { price: sitePrice })}</p>
 
       <form class="builder panel" action={href(lang, 'sites')} method="get" data-builder>
         <div class="b-row">
@@ -73,7 +73,10 @@ const sides = ['left', 'right', 'left', 'right'] as const;
           </div>
         </div>
         <p class="b-note">{d.hero.ctaNote}</p>
-        <button type="submit" class="btn btn-hero">{d.hero.cta}<Arrow /></button>
+        <div class="b-actions">
+          <button type="submit" class="btn btn-hero">{d.hero.cta}<Arrow /></button>
+          <a class="b-book" href={href(lang, 'book')}>{d.hero.book}<Arrow /></a>
+        </div>
       </form>
     </div>
 
@@ -182,7 +185,6 @@ const sides = ['left', 'right', 'left', 'right'] as const;
         <div class="st-visual">
           <dl class="spec panel">
             {h.about.facts.map(([k, v]) => <div><dt class="tag">{k}</dt><dd>{v}</dd></div>)}
-            <div><dt class="tag">Instagram</dt><dd><a class="link" href={`https://www.instagram.com/${config.instagram}/`} rel="noopener">@{config.instagram}</a></dd></div>
           </dl>
         </div>
       </div>
@@ -195,6 +197,7 @@ const sides = ['left', 'right', 'left', 'right'] as const;
         <div class="st-text">
           <h2 id="st-contact">{h.contact.title}</h2>
           <p class="lead">{h.contact.text}</p>
+          <a class="btn" href={href(lang, 'book')}>{d.hero.book}<Arrow /></a>
           <CopyEmail lang={lang} label={d.form.emailAlt} />
         </div>
         <ContactForm lang={lang} page="home" />
@@ -213,7 +216,7 @@ const sides = ['left', 'right', 'left', 'right'] as const;
     align-items: center; padding-block: clamp(40px, 7vw, 96px) clamp(32px, 5vw, 64px);
   }
   .hero-text { display: grid; gap: 20px; }
-  .hero h1 { max-width: 12ch; }
+  .hero h1 { max-width: 18ch; font-size: clamp(2.3rem, 1.3rem + 3.4vw, 4.1rem); }
   .builder { display: grid; gap: 16px; padding: clamp(18px, 2.5vw, 26px); margin-top: 12px; max-width: 620px; }
   .b-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 14px; }
   .builder .field { display: grid; gap: 6px; }
@@ -225,7 +228,10 @@ const sides = ['left', 'right', 'left', 'right'] as const;
   .builder input:focus-visible, .builder select:focus-visible { outline: none; border-color: var(--ink); box-shadow: 0 0 0 3px color-mix(in srgb, var(--hero) 70%, transparent); }
   .builder input::placeholder { color: var(--muted); opacity: 0.8; }
   .b-note { font-weight: 500; }
-  .builder .btn { justify-self: start; }
+  .b-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 22px; }
+  .b-book { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; color: var(--ink); text-underline-offset: 4px; }
+  .b-book:hover { text-decoration-thickness: 2px; }
+  .b-book svg { width: 1em; height: 1em; }
   .hero-phone { display: grid; justify-items: center; gap: 14px; }
   .hp-top { display: flex; align-items: center; justify-content: space-between; width: min(100%, 290px); min-height: 28px; }
   .b-dots { display: flex; gap: 4px; }

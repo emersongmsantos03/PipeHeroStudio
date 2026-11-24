@@ -36,7 +36,7 @@ function init(form: HTMLFormElement) {
     if (nome) el('negocio').value = nome;
     if (tipoLabel) el('tipo').value = tipo;
     const svc = el('servico') as unknown as HTMLSelectElement;
-    if (!svc.value) svc.value = 'site';
+    if (!svc.value || svc.value === 'unsure') svc.value = 'site';
     const box = form.querySelector<HTMLElement>('[data-prefill]');
     if (box && nome) {
       box.textContent = fill(m.prefill, { name: nome, type: tipoLabel || '—' });
@@ -57,7 +57,7 @@ function init(form: HTMLFormElement) {
       setError(input, msg);
       if (msg && !first) first = input;
     };
-    for (const n of ['nome', 'negocio', 'pais', 'servico', 'mensagem']) {
+    for (const n of ['nome', 'negocio']) {
       const i = el(n);
       mark(i, i.value.trim() ? '' : m.required);
     }
@@ -65,7 +65,6 @@ function init(form: HTMLFormElement) {
     mark(el('email'), !em ? m.required : /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em) ? '' : m.email);
     const ph = el('telefone').value.trim();
     mark(el('telefone'), ph && ph.replace(/\D/g, '').length < 9 ? m.phone : '');
-    mark(el('privacidade'), el('privacidade').checked ? '' : m.privacy);
     return first;
   }
 

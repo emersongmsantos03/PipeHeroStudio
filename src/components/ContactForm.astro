@@ -26,7 +26,7 @@ const msgs = {
   types,
 };
 const p = `${id}-`;
-const privacyHtml = fill(f.privacy, {
+const privacyHtml = fill(f.privacyNote, {
   link: `<a class="link" href="${href(lang, 'privacy')}">${f.privacyLink}</a>`,
 });
 const services = Object.entries(f.services) as [Service, string][];
@@ -46,6 +46,9 @@ const services = Object.entries(f.services) as [Service, string][];
     <input type="hidden" name="idioma" value={lang} />
     <input type="hidden" name="pagina" value={page} />
     <input type="hidden" name="tipo" value="" />
+    <input type="hidden" name="servico" value={service || 'unsure'} />
+    <input type="hidden" name="pais" value="" />
+    <input type="hidden" name="privacidade" value="sim" />
     <p hidden><label>{f.honeypot} <input name="bot-field" tabindex="-1" autocomplete="off" /></label></p>
 
     <p class="form-prefill" data-prefill hidden></p>
@@ -71,29 +74,10 @@ const services = Object.entries(f.services) as [Service, string][];
         <input id={p + 'telefone'} name="telefone" type="tel" autocomplete="tel" inputmode="tel" aria-describedby={p + 'telefone-error'} />
         <p class="field-error" id={p + 'telefone-error'}></p>
       </div>
-      <div class="field">
-        <label for={p + 'pais'}>{f.country} <span aria-hidden="true">*</span></label>
-        <input id={p + 'pais'} name="pais" type="text" autocomplete="country-name" list={p + 'paises'} required aria-describedby={p + 'pais-error'} />
-        <datalist id={p + 'paises'}>{f.countries.map((c) => <option value={c} />)}</datalist>
-        <p class="field-error" id={p + 'pais-error'}></p>
-      </div>
-      <div class="field">
-        <label for={p + 'servico'}>{f.service} <span aria-hidden="true">*</span></label>
-        <select id={p + 'servico'} name="servico" required aria-describedby={p + 'servico-error'}>
-          <option value="" selected={!service}>{f.servicePh}</option>
-          {services.map(([k, label]) => <option value={k} selected={service === k}>{label}</option>)}
-        </select>
-        <p class="field-error" id={p + 'servico-error'}></p>
-      </div>
       <div class="field field-full">
-        <label for={p + 'mensagem'}>{f.message} <span aria-hidden="true">*</span></label>
-        <textarea id={p + 'mensagem'} name="mensagem" rows="4" placeholder={f.messagePh} required aria-describedby={p + 'mensagem-error'}></textarea>
+        <label for={p + 'mensagem'}>{f.message} <span class="opt">({f.optional})</span></label>
+        <textarea id={p + 'mensagem'} name="mensagem" rows="3" placeholder={f.messagePh} aria-describedby={p + 'mensagem-error'}></textarea>
         <p class="field-error" id={p + 'mensagem-error'}></p>
-      </div>
-      <div class="field field-full field-check">
-        <input id={p + 'privacidade'} name="privacidade" type="checkbox" value="sim" required aria-describedby={p + 'privacidade-error'} />
-        <label for={p + 'privacidade'} set:html={privacyHtml + ' <span aria-hidden="true">*</span>'} />
-        <p class="field-error" id={p + 'privacidade-error'}></p>
       </div>
     </div>
 
@@ -102,7 +86,7 @@ const services = Object.entries(f.services) as [Service, string][];
         {f.submit}
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13m-5-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
       </button>
-      <p class="form-note">{f.requiredNote}</p>
+      <p class="form-note" set:html={privacyHtml} />
     </div>
     <p class="form-status" role="status" aria-live="polite" data-status></p>
   </form>
