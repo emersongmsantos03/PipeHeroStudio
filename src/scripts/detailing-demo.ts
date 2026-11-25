@@ -107,6 +107,7 @@ function setup(root: HTMLElement) {
   let imageSelection = 0;
   let readingPhoto = false;
   let lastPhoto = '';
+  let lastPhotoUsed = false;
   const photoUrl = (value: string) => value === 'sample' ? '/images/detailing-studio.webp' : value;
 
   function greet(text: string) {
@@ -241,8 +242,16 @@ function setup(root: HTMLElement) {
     }
     if (result.intent !== 'none') intent = result.intent;
 
+    // A new quote or booking for another vehicle, or a quote after a booking, is a new CRM record.
+    const sameCar = (car: string) => car.trim().toLowerCase() === details.car.trim().toLowerCase();
+    if (activeLead && (intent === 'quote' || intent === 'book') && details.car
+      && (!sameCar(activeLead.car) || (intent === 'quote' && activeLead.type === 'booking'))) {
+      activeLead = null;
+      if (lastPhotoUsed) lastPhoto = '';
+    }
+
     // Details shared after the request (email, phone, a photo) update the same CRM record.
-    if (activeLead) {
+    if (activeLead && sameCar(activeLead.car)) {
       const updates: Partial<Lead> = {};
       for (const key of ['name', 'phone', 'email', 'notes'] as const) {
         if (details[key] && details[key] !== activeLead[key]) updates[key] = details[key];
@@ -293,6 +302,7 @@ function setup(root: HTMLElement) {
       if (activeLead) activeLead.status = 'Cancelled by customer';
       notify('Appointment cancelled.');
     }
+    if (activeLead?.photo === lastPhoto) lastPhotoUsed = true;
     details.slot = '';
     intent = 'none';
     render();
@@ -329,7 +339,7 @@ function setup(root: HTMLElement) {
       if (messages.length > 12) messages.splice(0, 2);
       status.remove();
       show('Ava', result.reply);
-      if (attached) lastPhoto = attached;
+      if (attached) { lastPhoto = attached; lastPhotoUsed = false; }
       applyCustomer(result);
     } catch (error) {
       status.remove();

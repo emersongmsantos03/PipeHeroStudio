@@ -54,7 +54,7 @@ const en: Dict = {
       clinics: 'Clinic assistant',
       unsure: 'Not sure yet',
     },
-    countries: ['United States', 'United Kingdom', 'Ireland', 'Canada', 'Australia', 'Portugal', 'Spain'],
+    countries: ['United States', 'Canada', 'Ireland'],
     errors: {
       required: 'Please fill in this field.',
       email: "This email doesn't look complete. For example: name@business.com",
