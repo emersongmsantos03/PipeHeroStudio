@@ -74,7 +74,12 @@ export const SAMPLE_HISTORY: readonly (readonly [number, DetailingService, strin
   [23, 'Ceramic coating', 'Priya Shah'], [25, 'Full detail', 'Nora Diaz'], [28, 'Interior detail', 'Luis Ortega'],
 ];
 
-export function historySummary() {
+export function dayDate(offset: number, now = new Date()) {
+  const date = new Date(shopNow(now).date + offset * 86_400_000);
+  return { iso: date.toISOString().slice(0, 10), label: date.toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric' }) };
+}
+
+export function historySummary(now = new Date()) {
   const count = (days: number) => Object.fromEntries(DETAILING_SERVICES.map((service) => [service,
     SAMPLE_HISTORY.filter(([ago, done]) => ago <= days && done === service).length]));
   const visits = new Map<string, number>();
@@ -85,6 +90,7 @@ export function historySummary() {
     byServiceLast7Days: count(7),
     byServiceLast30Days: count(30),
     repeatCustomers: [...visits].filter(([, times]) => times > 1).map(([customer, times]) => ({ customer, visits: times })),
-    jobs: SAMPLE_HISTORY.map(([ago, service, customer]) => ({ daysAgo: ago, service, customer })),
+    today: dayDate(0, now),
+    jobs: SAMPLE_HISTORY.map(([ago, service, customer]) => ({ date: dayDate(-ago, now).iso, day: dayDate(-ago, now).label, service, customer })),
   };
 }

@@ -76,3 +76,8 @@ body.site-home {
   .site-home .cb-launch-ico, .site-home .cb-launch-ico img { width: 38px; height: 38px; }
   .site-home .cb-launch-txt { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
 }
+.phs-home .phs-plan-list { list-style: none; margin: 4px 0 14px; padding: 0; display: grid; gap: 10px; color: #c5bdaf; }
+.phs-home .phs-plan-list li { position: relative; padding-left: 20px; line-height: 1.5; }
+.phs-home .phs-plan-list li::before { content: ''; position: absolute; left: 0; top: .62em; width: 8px; height: 8px; border-radius: 50%; background: var(--phs-gold); }
+.phs-home .phs-plan-list strong { color: #f3ede2; }
+.phs-home .phs-plan-grid article > p.phs-plan-note { margin: 0 0 18px; font-size: .88rem; color: #9d9586; }
