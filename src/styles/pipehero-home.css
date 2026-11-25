@@ -91,3 +91,4 @@ body.site-home {
 .phs-home .phs-addon a { color: #f9ebd1; font-weight: 600; text-underline-offset: 4px; }
 .phs-home .phs-lead { max-width: 46ch; margin: 14px 0 0; color: #d6cdbe; }
 .phs-home .phs-steps p, .phs-home .phs-plan-grid article > p:not(.phs-price), .phs-home .phs-region { color: #d3cabb; }
+.phs-home .phs-hero-copy .phs-eyebrow { max-width: 38ch; line-height: 1.6; }
