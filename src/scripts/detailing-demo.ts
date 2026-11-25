@@ -241,10 +241,17 @@ function setup(root: HTMLElement) {
     }
     if (result.intent !== 'none') intent = result.intent;
 
-    // A photo shared after the request is attached to the same CRM record.
-    if (activeLead && lastPhoto && activeLead.photo !== lastPhoto) {
-      activeLead.photo = lastPhoto;
-      notify('Photo added to your request.');
+    // Details shared after the request (email, phone, a photo) update the same CRM record.
+    if (activeLead) {
+      const updates: Partial<Lead> = {};
+      for (const key of ['name', 'phone', 'email', 'notes'] as const) {
+        if (details[key] && details[key] !== activeLead[key]) updates[key] = details[key];
+      }
+      if (lastPhoto && activeLead.photo !== lastPhoto) updates.photo = lastPhoto;
+      if (Object.keys(updates).length) {
+        Object.assign(activeLead, updates);
+        notify(updates.photo ? 'Photo added to your request.' : 'Contact details updated in the CRM.');
+      }
     }
     if (!result.commit) { render(); return; }
 
