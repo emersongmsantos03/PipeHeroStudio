@@ -1,13 +1,49 @@
 ---
 import Base from '../layouts/Base.astro';
 import '../styles/pipehero-home.css';
-const steps = [
-  ['Answer and qualify every lead', 'Ava answers service questions day and night and asks the right follow-ups, so each lead arrives with the vehicle, service, photos, name and phone.'],
-  ['Book and keep your systems current', 'She offers open times from your booking tool, books, reschedules and cancels, and updates the record in your CRM.'],
-  ['Report on your shop, on demand', 'Ask Ava what’s on today’s schedule, which new requests came in or how many jobs of each service you did on a given day or between two dates. She pulls it from your systems and flags what needs your attention.'],
+import '../styles/phs-offer.css';
+
+const features = [
+  ['before', 'Before & after, front and center', 'A drag-to-reveal slider for your best transformations. Your work does the selling.'],
+  ['packages', 'Packages with starting prices', 'Interior, exterior, correction, coating, PPF. Fewer “how much?” messages in your DMs.'],
+  ['form', 'A quote form that asks for the car', 'Year, make, model, service and a photo arrive in your inbox, ready to price in one reply.'],
+  ['phone', 'Tap to call or text', 'One tap from Google to your phone, on every page, on every screen.'],
+  ['map', 'Easy to find on Google', 'Your service area, map, hours and basic SEO, so local searches lead to you.'],
+  ['key', 'Yours, no strings', 'Your domain, your hosting, your site. No monthly fee to keep it online.'],
 ];
+const included = [
+  'Up to 5 sections built for detailers',
+  'Before & after slider with your photos',
+  'Packages and starting prices',
+  'Quote form with vehicle and photo, sent to your email',
+  'Tap-to-call and text buttons',
+  'Map, hours and basic Google SEO',
+  'Mobile-first, fast on any phone',
+  '1 round of changes before going live',
+  'Published on your own domain',
+];
+const steps = [
+  ['Tell us about your shop', 'Services, area and a few photos of your work. The form takes about 2 minutes.'],
+  ['See your site in 48 hours', 'We send a private preview link. Ask for changes and we fine-tune it.'],
+  ['Love it? Go live for US$149', 'Pay once and we publish it on your domain. Don’t love it? You pay nothing.'],
+];
+const faqs = [
+  ['Do I pay anything upfront?', 'No. You see the finished preview first. You only pay if you want it published.'],
+  ['What do I need to send?', 'Your services, the area you cover and some photos of your work. Before-and-afters are perfect. We help you with the text.'],
+  ['What about the domain and hosting?', 'They stay in your name. Use the domain you have or register one directly with a provider. We can publish on free hosting, so there is no monthly fee to keep the site online.'],
+  ['I already have a site. Is this for me?', 'Yes, if it is slow, hard to use on a phone or does not show your work. We rebuild it around your before-and-afters and quote requests.'],
+  ['Can I add Ava later?', 'Anytime. The site works on its own. Ava is an optional add-on when you want help with messages and bookings.'],
+];
+const icons: Record<string, string> = {
+  before: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M12 5v14"/><path d="m8.5 10.5-2 1.5 2 1.5M15.5 10.5l2 1.5-2 1.5"/>',
+  packages: '<path d="M4 7h16M4 12h16M4 17h10"/><circle cx="18" cy="17" r="2"/>',
+  form: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h4"/>',
+  phone: '<rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18.5h2"/>',
+  map: '<path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11Z"/><circle cx="12" cy="10" r="2.2"/>',
+  key: '<circle cx="8" cy="15" r="4"/><path d="m11 12 8-8M16 7l2 2M14 9l2 2"/>',
+};
 ---
-<Base lang="en" page="home" title="Websites for Auto Detailing Shops | Pipe Hero Studio" description="A fast, mobile-first website that shows off your detailing work and turns visitors into quote requests. Preview in 48 business hours, US$149 launch price, pay only if you love it.">
+<Base lang="en" page="home" title="Websites for Auto Detailing Shops | Pipe Hero Studio" description="A website built around your before-and-afters, packages and quote requests. Free preview in 48 business hours. US$149 launch price, pay only if you love it.">
   <div class="phs-home">
     <section class="wrap phs-hero">
       <div class="phs-hero-copy">
@@ -20,12 +56,12 @@ const steps = [
           <li><strong>$0</strong> unless you love it</li>
         </ul>
         <div class="phs-actions">
-          <a class="phs-button" href="/en/contact/?servico=site" data-campaign-link>Get my website preview <span aria-hidden="true">↗</span></a>
+          <a class="phs-button phs-button-lg" href="/en/contact/?servico=site" data-campaign-link>Get my free preview <span aria-hidden="true">↗</span></a>
           <a class="phs-text-link" href="/en/demo/" data-campaign-link>See a live example <span aria-hidden="true">↗</span></a>
         </div>
-        <p class="phs-addon"><span>Add-on</span> Want help with messages and bookings? <a href="#how-it-works">Meet Ava, your AI front desk ↓</a></p>
+        <p class="phs-micro">No payment, no card. You see the site before you decide.</p>
       </div>
-      <a class="phs-demo-image" href="/en/demo/" aria-label="Open the Northline Detailing demo website" data-campaign-link>
+      <a class="phs-demo-image" href="/en/demo/" aria-label="Open the Northline Detailing example website" data-campaign-link>
         <img src="/images/pipehero-detailing.webp" alt="Graphite sports coupe reflecting warm inspection lights in a detailing garage" width="1200" height="800" fetchpriority="high" />
         <span class="phs-demo-caption">
           <span><small>Example site we built</small><strong>Northline Detailing</strong></span>
@@ -34,21 +70,89 @@ const steps = [
       </a>
     </section>
 
-    <section class="phs-how" id="how-it-works">
+    <section class="phs-get" id="what-you-get">
+      <div class="wrap">
+        <div class="phs-section-head">
+          <p class="phs-eyebrow">What you get</p>
+          <h2>Everything a customer needs to pick you.</h2>
+          <p class="phs-lead">Built for detailers, not a generic template. Every section has one job: turn a visit into a quote request.</p>
+        </div>
+        <div class="phs-get-grid">
+          <figure class="phs-ba" data-ba>
+            <div class="phs-ba-frame">
+              <img class="phs-ba-after" src="/images/northline-finish.webp" alt="Polished silver coupe under studio lights, after detailing" width="1000" height="667" loading="lazy" />
+              <div class="phs-ba-before" aria-hidden="true">
+                <img src="/images/northline-finish.webp" alt="" width="1000" height="667" loading="lazy" />
+              </div>
+              <span class="phs-ba-tag phs-ba-tag-before" aria-hidden="true">Before</span>
+              <span class="phs-ba-tag phs-ba-tag-after" aria-hidden="true">After</span>
+              <span class="phs-ba-handle" aria-hidden="true"><i></i></span>
+              <input type="range" min="0" max="100" value="50" aria-label="Drag to compare before and after" data-ba-range />
+            </div>
+            <figcaption>Try it: drag the slider. On your site, this shows your real before-and-afters. <span>Example image</span></figcaption>
+          </figure>
+          <ul class="phs-features">
+            {features.map(([icon, title, text]) => <li>
+              <span class="phs-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" set:html={icons[icon]} /></span>
+              <div><h3>{title}</h3><p>{text}</p></div>
+            </li>)}
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="wrap phs-process" id="how-it-works">
+      <div class="phs-section-head">
+        <p class="phs-eyebrow">How it works</p>
+        <h2>Three steps. Zero risk.</h2>
+      </div>
+      <ol class="phs-process-steps">
+        {steps.map(([title, text], index) => <li>
+          <span class="phs-step-num" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+          <h3>{title}</h3>
+          <p>{text}</p>
+        </li>)}
+      </ol>
+    </section>
+
+    <section class="phs-offer-band" id="offer">
+      <div class="wrap phs-offer">
+        <div class="phs-offer-copy">
+          <p class="phs-eyebrow">Founding shop offer</p>
+          <h2>Your detailing website for <em>US$149.</em></h2>
+          <p class="phs-lead">Launch price for the first 5 shops. After that it’s US$199. Pay once, after you approve the preview. No monthly fee to keep it online.</p>
+          <div class="phs-guarantee">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 5 6v6c0 4.4 3 7.6 7 9 4-1.4 7-4.6 7-9V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+            <div><strong>Love it or pay $0.</strong> Not happy with the preview? Say so and you owe nothing. The preview is deleted.</div>
+          </div>
+        </div>
+        <div class="phs-offer-card">
+          <p class="phs-launch">5 founding spots</p>
+          <p class="phs-offer-price">US$149 <small>one-time</small></p>
+          <p class="phs-offer-alt"><s>US$199</s> regular · €139 in Ireland <s>€189</s></p>
+          <ul class="phs-checks">
+            {included.map((item) => <li>{item}</li>)}
+          </ul>
+          <a class="phs-button phs-button-lg phs-button-block" href="/en/contact/?servico=site" data-campaign-link>Claim my founding spot <span aria-hidden="true">↗</span></a>
+          <p class="phs-micro">Free preview in 48 business hours. Domain and hosting stay in your name.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="phs-how" id="ava">
       <div class="wrap phs-how-grid">
         <div>
           <p class="phs-eyebrow">Optional add-on · Ava</p>
           <h2>Then let Ava handle the front desk.</h2>
           <p class="phs-lead">Once your site is live, Ava answers customers, books jobs and keeps your CRM and calendar in order, so you stay on the cars.</p>
-          <ol class="phs-steps">
-            {steps.map(([title, description], index) => <li>
-              <span aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
-              <div><h3>{title}</h3><p>{description}</p></div>
-            </li>)}
-          </ol>
+          <ul class="phs-plan-list">
+            <li><strong>For your customers:</strong> answers questions, qualifies leads, books, reschedules and keeps every record current.</li>
+            <li><strong>For you:</strong> just ask. “What’s on today?” gets every appointment with times. “How many coatings from the 1st to the 15th?” gets the count by service.</li>
+          </ul>
+          <p class="phs-plan-note">Monthly plan, priced by setup and integrations.</p>
           <div class="phs-actions">
-            <a class="phs-button" href="/en/demo/#ava" data-campaign-link>Try Ava with a photo <span aria-hidden="true">↗</span></a>
-            <a class="phs-text-link" href="/en/demo/#shop-view" data-campaign-link>Try the owner view <span aria-hidden="true">↗</span></a>
+            <a class="phs-button phs-outline" href="/en/demo/#ava" data-campaign-link>Try Ava in the demo <span aria-hidden="true">↗</span></a>
+            <a class="phs-text-link" href="/en/contact/?servico=agents" data-campaign-link>Ask about Ava <span aria-hidden="true">↗</span></a>
           </div>
         </div>
         <div class="phs-chat-preview" aria-label="Example conversation with Ava">
@@ -63,35 +167,35 @@ const steps = [
       </div>
     </section>
 
-    <section class="wrap phs-plans" id="plans">
-      <p class="phs-eyebrow">Pricing</p>
-      <h2>Start with the site. Add Ava when you need it.</h2>
-      <div class="phs-plan-grid">
-        <article>
-          <h3>Detailing website</h3>
-          <p class="phs-launch">Launch price · first 5 shops</p>
-          <p class="phs-price">US$149 <small>/ €139 in Ireland · one-time</small></p>
-          <p class="phs-regular">Regular price <s>US$199</s> · <s>€189</s></p>
-          <p>Most shops start here. Show your services and your best work on a mobile-friendly site with a quote request form. See the preview before you pay.</p>
-          <ul class="phs-plan-list">
-            <li><strong>Pay only if you love it:</strong> preview in 48 business hours, no payment before you approve.</li>
-            <li><strong>Yours from day one:</strong> domain and hosting stay in your name. Use your own, or we set you up on free hosting.</li>
-          </ul>
-          <a class="phs-button phs-outline" href="/en/contact/?servico=site" data-campaign-link>Request my website <span aria-hidden="true">↗</span></a>
-        </article>
-        <article>
-          <h3>Managed Ava assistant</h3>
-          <p class="phs-price">Custom quote <small>/ monthly</small></p>
-          <p>Ava connects to the CRM and booking tool you already use and keeps an eye on both.</p>
-          <ul class="phs-plan-list">
-            <li><strong>For your customers:</strong> answers questions, qualifies leads, books, reschedules and keeps every record current.</li>
-            <li><strong>For you:</strong> just ask. “What’s on today?” gets every appointment with times. “How many coatings from the 1st to the 15th?” gets the count by service.</li>
-          </ul>
-          <p class="phs-plan-note">Monthly pricing depends on the setup and integrations.</p>
-          <a class="phs-button" href="/en/contact/?servico=agents" data-campaign-link>Talk to us about Ava <span aria-hidden="true">↗</span></a>
-        </article>
+    <section class="wrap phs-faq" id="faq">
+      <div class="phs-section-head">
+        <p class="phs-eyebrow">Questions</p>
+        <h2>Before you claim your spot.</h2>
       </div>
-      <p class="phs-region">Serving detailing shops in the US, Canada and Ireland. Website pricing is in US dollars for the US and Canada and in euros for Ireland. Domain and hosting costs, if any, are paid directly to the provider.</p>
+      <div class="phs-faq-list">
+        {faqs.map(([q, a]) => <details><summary>{q}</summary><p>{a}</p></details>)}
+      </div>
+    </section>
+
+    <section class="phs-final">
+      <div class="wrap phs-final-in">
+        <h2>Your next coating client is searching right now.</h2>
+        <p>Give them a site that shows the finish and makes it easy to ask for a quote.</p>
+        <div class="phs-actions">
+          <a class="phs-button phs-button-lg" href="/en/contact/?servico=site" data-campaign-link>Get my free preview <span aria-hidden="true">↗</span></a>
+          <a class="phs-text-link" href="/en/demo/" data-campaign-link>See a live example <span aria-hidden="true">↗</span></a>
+        </div>
+        <p class="phs-region">Serving detailing shops in the US, Canada and Ireland. Prices in US dollars for the US and Canada and in euros for Ireland. Domain and hosting costs, if any, are paid directly to the provider.</p>
+      </div>
     </section>
   </div>
 </Base>
+
+<script>
+  for (const box of document.querySelectorAll<HTMLElement>('[data-ba]')) {
+    const range = box.querySelector<HTMLInputElement>('[data-ba-range]');
+    const set = () => box.style.setProperty('--ba', (range?.value || '50') + '%');
+    range?.addEventListener('input', set);
+    set();
+  }
+</script>

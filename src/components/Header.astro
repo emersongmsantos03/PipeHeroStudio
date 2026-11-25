@@ -7,10 +7,10 @@ interface Props { lang: Lang; page: PageKey }
 const { lang, page } = Astro.props;
 const d = t(lang);
 const nav: { label: string; url: string; cta?: boolean }[] = [
-  { label: 'Live demo', url: '/en/demo/' },
-  { label: 'How it works', url: '/en/#how-it-works' },
-  { label: 'Pricing', url: '/en/#plans' },
-  { label: 'Book a call', url: '/en/book/', cta: true },
+  { label: 'What you get', url: '/en/#what-you-get' },
+  { label: 'Live example', url: '/en/demo/' },
+  { label: 'Pricing', url: '/en/#offer' },
+  { label: 'Get my free preview', url: '/en/contact/?servico=site', cta: true },
 ];
 ---
 <header class="site-header">
