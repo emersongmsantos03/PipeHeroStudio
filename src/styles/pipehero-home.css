@@ -92,3 +92,6 @@ body.site-home {
 .phs-home .phs-lead { max-width: 46ch; margin: 14px 0 0; color: #d6cdbe; }
 .phs-home .phs-steps p, .phs-home .phs-plan-grid article > p:not(.phs-price), .phs-home .phs-region { color: #d3cabb; }
 .phs-home .phs-hero-copy .phs-eyebrow { max-width: 38ch; line-height: 1.6; }
+.phs-home .phs-plan-grid article > p.phs-launch { display: inline-block; width: fit-content; margin: 12px 0 0; padding: 3px 9px; border-radius: 999px; background: #f8c96822; border: 1px solid #f8c96866; color: var(--phs-gold); font: 600 .72rem var(--f-mono); text-transform: uppercase; letter-spacing: .08em; }
+.phs-home .phs-plan-grid article > p.phs-regular { margin: 0 0 12px; color: #a99f8f; font-size: .88rem; }
+.phs-home .phs-regular s { color: #a99f8f; }

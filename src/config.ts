@@ -29,7 +29,7 @@ export const config = {
   chatEnabled: true,
 
   /** Preço do site profissional: euros em PT e ES, dólares em EN. */
-  sitePrice: { EUR: 100, USD: 100 } as Money,
+  sitePrice: { EUR: 139, USD: 149 } as Money,
 
   /** Manutenção mensal do site. `null` = "Sob consulta". Ex.: { EUR: 15, USD: 15 } */
   maintenanceFrom: null as Money,

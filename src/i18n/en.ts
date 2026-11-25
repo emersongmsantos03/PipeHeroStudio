@@ -210,7 +210,7 @@ const en: Dict = {
   sites: {
     title: 'Professional website in 48 hours. Pay only if you like it | Pipe Hero Studio',
     description:
-      "A professional website for your business for $100: mobile-first, with a contact form, WhatsApp and a map. Ready in 48 business hours. Don't like it? Don't pay.",
+      "A professional website for your business for $149: mobile-first, with a contact form, WhatsApp and a map. Ready in 48 business hours. Don't like it? Don't pay.",
     hero: {
       title: 'A professional website for your business.',
       strong: 'You only pay if you like it.',
