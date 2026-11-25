@@ -1,4 +1,5 @@
 /* Gancho do hero: o mini-site monta-se enquanto a pessoa escreve. Tudo no navegador. */
+import { campaignFromQuery } from '../../shared/campaign';
 import { PALETTE, domainFor, initials, isBizType, type BizType } from '../lib/minisite';
 
 type TypeText = { label: string; tagline: string; cta: string; sections: string[][] };
@@ -19,7 +20,7 @@ if (root) {
   const typeIn = root.querySelector<HTMLSelectElement>('[data-builder-type]')!;
   const badge = root.querySelector<HTMLElement>('[data-builder-badge]')!;
   const live = root.querySelector<HTMLElement>('[data-builder-live]')!;
-  const dots = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-example]'));
+  const exampleButtons = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-example]'));
   const q = (sel: string) => ms.querySelector<HTMLElement>(sel)!;
   const setAll = (sel: string, text: string) => ms.querySelectorAll<HTMLElement>(sel).forEach((el) => (el.textContent = text));
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -63,39 +64,24 @@ if (root) {
     current = type;
   };
 
-  const setDots = (i: number) => dots.forEach((b, j) => b.setAttribute('aria-pressed', String(i === j)));
+  const selectExample = (type: BizType) => exampleButtons.forEach((button, i) => {
+    button.setAttribute('aria-pressed', String(data.examples[i].type === type));
+  });
 
-  // Exemplos: mostra os 3 uma vez e para no primeiro. Nunca em loop.
-  let idx = 0;
-  let steps = 0;
-  let timer = 0;
-  const showExample = (i: number) => {
-    idx = i;
-    const e = data.examples[i];
-    render(e.name, e.type, true);
-    badge.textContent = data.example;
-    setDots(i);
-  };
-  const stop = () => { if (timer) { clearInterval(timer); timer = 0; } };
-  if (!reduced && data.examples.length > 1) {
-    timer = window.setInterval(() => {
-      steps += 1;
-      showExample((idx + 1) % data.examples.length);
-      if (steps >= data.examples.length) stop();
-    }, 3600);
-  }
-  dots.forEach((b, i) => b.addEventListener('click', () => { stop(); nameIn.value = ''; showExample(i); }));
+  exampleButtons.forEach((button, i) => button.addEventListener('click', () => {
+    typeIn.value = data.examples[i].type;
+    update();
+  }));
 
   let liveTimer = 0;
   const update = () => {
-    stop();
     const typed = nameIn.value.trim();
     const type = isBizType(typeIn.value) ? typeIn.value : 'other';
     const fallback = data.examples.find((e) => e.type === type)?.name || data.types[type].label;
     const typeChanged = type !== current;
     render(typed || fallback, type, typeChanged);
     badge.textContent = typed ? data.yourPreview : data.example;
-    setDots(-1);
+    selectExample(type);
     clearTimeout(liveTimer);
     liveTimer = window.setTimeout(() => {
       live.textContent = data.live.replace('{name}', typed || fallback).replace('{type}', data.types[type].label);
@@ -103,15 +89,15 @@ if (root) {
   };
   nameIn.addEventListener('input', update);
   typeIn.addEventListener('change', update);
-  nameIn.addEventListener('focus', stop);
 
   // Leva o nome e o tipo para o formulário da landing de Sites.
   form.addEventListener('submit', (e) => {
     e.preventDefault();
-    const params = new URLSearchParams();
+    const url = new URL(form.action);
+    for (const [key, value] of Object.entries(campaignFromQuery(location.search))) url.searchParams.set(key, value);
     const typed = nameIn.value.trim();
-    if (typed) params.set('nome', typed);
-    params.set('tipo', typeIn.value);
-    location.href = `${form.getAttribute('action')}?${params.toString()}#pedido`;
+    if (typed) url.searchParams.set('nome', typed);
+    url.searchParams.set('tipo', typeIn.value);
+    location.href = url.href;
   });
 }

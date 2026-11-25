@@ -42,6 +42,10 @@ export async function render(ctx) {
 
   const transcript = safeParse(l.transcript, []);
   const svc = services(l.services);
+  const campaign = events
+    .filter((event) => event.type === 'form_submit' || event.type === 'meeting_booked')
+    .map((event) => safeParse(event.meta, {}))
+    .find((meta) => meta?.utm_source);
   const first = (l.name || '').split(' ')[0];
   const wa = waLink(l.phone, `Olá${first ? ' ' + first : ''}! Aqui é o ${me.name.split(' ')[0]}, da Pipe Hero Studio.`);
   const mail = mailLink(l.email, `Pipe Hero Studio${l.business ? ' — ' + l.business : ''}`, `Olá${first ? ' ' + first : ''},\n\n`);
@@ -88,7 +92,7 @@ export async function render(ctx) {
             if (!rows.length) return '';
             return `<div class="kv-group"><h3>${g}</h3><dl class="kv stack">${rows.map(([k, lab]) => `<dt>${lab}</dt><dd>${k === 'email' ? `<a href="mailto:${esc(l.email)}">${esc(l.email)}</a>` : k === 'language' ? esc(LANG[l[k]] || l[k]) : esc(l[k])}</dd>`).join('')}</dl></div>`;
           }).join('')}
-          <div class="kv-group"><h3>Registo</h3><dl class="kv"><dt>Origem</dt><dd>${esc(SOURCE[l.source] || l.source)}</dd><dt>Criado</dt><dd>${dateTime(l.created_at)}</dd><dt>Atualizado</dt><dd>${ago(l.updated_at)}</dd>${l.closed_at ? `<dt>Fechado</dt><dd>${date(l.closed_at)}</dd>` : ''}</dl></div>
+          <div class="kv-group"><h3>Registo</h3><dl class="kv"><dt>Origem</dt><dd>${esc(SOURCE[l.source] || l.source)}</dd>${campaign ? `<dt>Última campanha</dt><dd>${esc([campaign.utm_source, campaign.utm_medium, campaign.utm_campaign].filter(Boolean).join(' · '))}</dd>` : ''}<dt>Criado</dt><dd>${dateTime(l.created_at)}</dd><dt>Atualizado</dt><dd>${ago(l.updated_at)}</dd>${l.closed_at ? `<dt>Fechado</dt><dd>${date(l.closed_at)}</dd>` : ''}</dl></div>
         </section>
       </div>
 
@@ -293,7 +297,7 @@ export async function render(ctx) {
 
 function eventLabel(e) {
   const src = EMAIL_SOURCE[e.source] || e.source;
-  return ({ email_sent: `E-mail enviado (${src})`, email_failed: `E-mail falhou (${src})`, whatsapp_sent: `WhatsApp enviado (${src})`, form_submit: 'Formulário enviado', lead_created: 'Lead criado' })[e.type] || e.type;
+  return ({ email_sent: `E-mail enviado (${src})`, email_failed: `E-mail falhou (${src})`, whatsapp_sent: `WhatsApp enviado (${src})`, form_submit: 'Formulário enviado', meeting_booked: 'Reunião marcada', lead_created: 'Lead criado' })[e.type] || e.type;
 }
 
 /** Pré-visualiza a mensagem preenchida, deixa editar e abre no WhatsApp / e-mail, registando no histórico. */

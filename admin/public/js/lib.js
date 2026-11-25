@@ -80,7 +80,7 @@ export const SOURCES = [['form', 'Formulário'], ['chat', 'Ava (chat)'], ['agent
 export const SOURCE = Object.fromEntries(SOURCES);
 export const SOURCE_COLOR = { form: 'var(--s1)', chat: 'var(--s2)', agent: 'var(--s3)', manual: 'var(--s4)' };
 export const QUAL = { hot: 'Quente', warm: 'Morno', cold: 'Frio' };
-export const SERVICES = { website: 'Site', site: 'Site', chat: 'Chat IA', crm: 'CRM', ai_agents: 'Agentes IA', agents: 'Agentes IA', clinic_assistant: 'Clínicas', clinics: 'Clínicas', other: 'Outro', unsure: 'Ainda não sabe' };
+export const SERVICES = { website: 'Site', site: 'Site', chat: 'Chat IA', crm: 'CRM', ai_agents: 'Agentes IA', agents: 'Agentes IA', clinic_assistant: 'Clínicas', clinics: 'Clínicas', realtor_crm: 'CRM para imobiliárias', study_budget: 'Kit Estudos e Orçamento', other: 'Outro', unsure: 'Ainda não sabe' };
 export const EMAIL_SOURCE = { ava: 'Ava', site: 'Formulário do site', agent: 'Agente externo', system: 'Painel (avisos)', admin: 'Painel' };
 export const CURRENCIES = ['EUR', 'USD', 'BRL', 'GBP'];
 
@@ -135,6 +135,7 @@ const P = {
   logout: '<path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 8l-4 4 4 4M6 12h10"/>',
   check: '<path d="M5 12l5 5 9-10"/>',
   globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/>',
+  instagram: '<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.4 6.7h.01" stroke-width="2.4"/>',
   search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
   tasks: '<rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M8 12l3 3 5-6"/>',
   chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',

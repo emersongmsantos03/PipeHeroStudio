@@ -1,3 +1,4 @@
+import { mountProspectorMail } from './prospector-mail.js';
 // Relatórios: taxa de ganho, tempo para fechar, tempo até ao 1.º contacto, previsão ponderada, motivos de perda,
 // desempenho por origem, por serviço e por pessoa da equipa.
 import { api, esc, num, pct, money, moneyMulti, columns, monthLabel, icon, avatar, emptyState, SOURCES, SOURCE_COLOR, SERVICES, safeParse, ACT } from '../lib.js';
@@ -71,6 +72,7 @@ export async function render(ctx) {
   const maxS = Math.max(1, ...svcRows.map((x) => x[1].total));
 
   ctx.page.innerHTML = `
+    <div data-prospector-mail></div>
     <section class="tiles">
       <div class="tile tc-green"><span class="label"><span class="ti">${icon('target')}</span>Taxa de ganho</span><span class="value">${winRate == null ? '—' : pct(winRate)}</span><span class="foot">${num(won)} ganhos · ${num(lost)} perdidos</span></div>
       <div class="tile tc-blue"><span class="label"><span class="ti">${icon('euro')}</span>Vendido</span><span class="value sm">${moneyMulti(wonVal)}</span><span class="foot">Ticket médio: ${moneyMulti(ticket, '—')}</span></div>
@@ -106,6 +108,7 @@ export async function render(ctx) {
         }).join('')}</tbody></table></div>` : `<div style="padding:0 20px 20px">${emptyState('users', 'Sem dados ainda.')}</div>`}
       </section>
     </div>`;
+  mountProspectorMail(ctx);
 
   // Vendas por mês (EUR)
   const months = [];

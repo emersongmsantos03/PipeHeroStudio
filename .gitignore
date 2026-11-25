@@ -18,3 +18,5 @@ npm-debug.log*
 # tipos gerados pelo wrangler
 .wrangler/
 .dev.vars*
+Publicar.command
+.claude-sync/

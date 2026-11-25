@@ -2,8 +2,8 @@
 import { api, esc, icon, toast } from '../lib.js';
 
 const history = [];   // conversa desta sessão do browser
-const EXEMPLOS = ['Quanto faturamos este mês?', 'E comparado com o mês passado?', 'Se continuarmos a crescer neste ritmo, quanto faturamos em 1 ano?',
-  'Quantos e-mails o prospector enviou esta semana?', 'Quais leads quentes estão parados há mais de 7 dias?', 'Cria uma tarefa para amanhã: ligar para o lead 12'];
+const EXEMPLOS = ['O que você aprendeu?', 'Quanto faturamos este mês?', 'E comparado com o mês passado?', 'Se continuarmos a crescer neste ritmo, quanto faturamos em 1 ano?',
+  'Me mostra os resultados da prospecção dos últimos 7 dias', 'Quais leads quentes estão parados há mais de 7 dias?', 'Cria uma tarefa para amanhã: ligar para o lead 12'];
 
 function fmt(t) {
   return esc(t).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*(.+?)\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
@@ -13,7 +13,7 @@ export async function render(ctx) {
   ctx.setTitle('Assistente', 'Pergunte pelos números, peça cálculos ou alterações no CRM e no financeiro');
   ctx.page.innerHTML = `
     <section class="card assist">
-      <div class="card-h"><h2>${icon('bot')} Agente interno</h2><span class="badge" data-online>a verificar…</span></div>
+      <div class="card-h"><h2>${icon('bot')} Agente interno</h2><span class="badge" data-online>PC: verificando…</span><span class="badge" data-public>Chat do site: verificando…</span></div>
       <div class="assist-log" data-log aria-live="polite"></div>
       <div class="assist-ex" data-ex>${EXEMPLOS.map((e) => `<button class="btn sm" type="button">${esc(e)}</button>`).join('')}</div>
       <form class="assist-form" data-form>
@@ -37,7 +37,10 @@ export async function render(ctx) {
       const s = await api('/assistant/status');
       const b = ctx.page.querySelector('[data-online]');
       if (!b) return;
-      b.textContent = s.online ? 'online' : 'offline (PC desligado?)';
+      b.textContent = s.online ? 'PC conectado' : 'PC indisponível';
+      const publicBadge = ctx.page.querySelector('[data-public]');
+      publicBadge.textContent = s.publicOnline ? 'Chat do site: Qwen conectado' : 'Chat do site: formulário disponível';
+      publicBadge.className = 'badge ' + (s.publicOnline ? 'won' : 'pending');
       b.className = 'badge ' + (s.online ? 'won' : 'hot');
     } catch { /* ignora */ }
   };

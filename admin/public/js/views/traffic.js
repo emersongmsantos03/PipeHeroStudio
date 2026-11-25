@@ -2,6 +2,7 @@
 // Sem cookies nem IP: o site regista só a página, a origem (domínio), o país, o idioma e se é celular ou computador.
 import { api, esc, num, buckets, columns, dayLabel, icon, showTip, hideTip } from '../lib.js';
 import { getRange, setRange, rangeSeg } from './dashboard.js';
+const CAMPAIGN_NAMES = new Map([['website-renovation', 'Renovação de site'], ['crm-inquiries', 'Automação de CRM'], ['detailing-website', 'Site para estética'], ['detailing-ava', 'Ava para estética']]);
 
 // ordem fixa dos canais = ordem fixa das cores (nunca muda com o filtro)
 const CANAIS = [
@@ -20,7 +21,7 @@ function pais(c) {
   const flag = String.fromCodePoint(...[...c.toUpperCase()].map((x) => 0x1f1a5 + x.charCodeAt(0)));
   return `${flag} ${(_dn && _dn.of(c.toUpperCase())) || c}`;
 }
-const ORIGENS = [[/google\./, 'Google'], [/bing\./, 'Bing'], [/duckduckgo/, 'DuckDuckGo'], [/instagram/, 'Instagram'], [/facebook|fb\./, 'Facebook'],
+const ORIGENS = [[/^prospector$/, 'Prospector'], [/google\./, 'Google'], [/bing\./, 'Bing'], [/duckduckgo/, 'DuckDuckGo'], [/instagram/, 'Instagram'], [/facebook|fb\./, 'Facebook'],
   [/linkedin|lnkd\.in/, 'LinkedIn'], [/(^|\.)t\.co$|twitter|x\.com$/, 'X / Twitter'], [/whatsapp|wa\.me/, 'WhatsApp'], [/reddit/, 'Reddit'], [/pinterest/, 'Pinterest'],
   [/youtube/, 'YouTube'], [/quora/, 'Quora'], [/medium\.com/, 'Medium'], [/zoho|mail\.|outlook|gmail/, 'E-mail'], [/upwork/, 'Upwork'], [/chatgpt|openai/, 'ChatGPT'],
   [/perplexity/, 'Perplexity'], [/claude\.ai/, 'Claude']];
@@ -49,7 +50,7 @@ export async function render(ctx) {
   const range = getRange();
   ctx.setTitle('Tráfego do site', 'Visitas em pipeherostudio.digital: de onde vêm, de que países e o que veem');
   ctx.setActions(`<a class="btn" href="https://pipeherostudio.digital" target="_blank" rel="noopener">${icon('ext')}<span class="lbl">Abrir o site</span></a>`);
-  const [t, ig] = await Promise.all([api(`/traffic?range=${range}`), api(`/instagram?range=${range}`).catch(() => ({ connected: false }))]);
+  const t = await api(`/traffic?range=${range}`);
   if (ctx.stale()) return;
 
   const total = t.total || 0;
@@ -74,7 +75,19 @@ export async function render(ctx) {
       <div class="tile"><span class="label">Pelo celular</span><span class="value">${pct(cel, total)}%</span><span class="foot">${num(t.other.form_submit || 0)} formulário${t.other.form_submit === 1 ? '' : 's'} · ${num(t.other.email_click || 0)} clique${t.other.email_click === 1 ? '' : 's'} de e-mail</span></div>
     </section>
 
-    ${igCard(ig, t)}
+    <section class="card ig-traffic-link">
+      <div><h2>Instagram</h2><p class="muted"><b>${num(t.igVisits)}</b> páginas vistas vindas do Instagram neste período.</p></div>
+      <a class="btn" href="#/instagram">${icon('instagram')} Ver métricas do Instagram ${icon('right')}</a>
+    </section>
+
+    <section class="card">
+      <div class="card-h"><h2>Campanhas de captação</h2></div>
+      <p class="muted">O funil usa links com UTM. Aceitos são envios confirmados pelo servidor de e-mail. Cliques contam links únicos. Conversas da Ava contam sessões com resposta. Vendas usam o primeiro formulário ou agendamento identificado antes do fechamento. Envios antigos sem campanha ficam nos totais de prospecção.</p>
+      ${t.campaigns?.length ? `<div class="table-wrap"><table class="t">
+        <thead><tr><th>Origem</th><th>Canal</th><th>Campanha</th><th>E-mails aceitos</th><th>Links clicados</th><th>Visitas</th><th>Demos abertas</th><th>Conversas Ava</th><th>Orçamentos de teste</th><th>Pedidos comerciais</th><th>Reuniões</th><th>Vendas</th></tr></thead>
+        <tbody>${t.campaigns.map((r) => `<tr><td>${esc(origem(r.origin))}</td><td>${esc(r.medium || '—')}</td><td>${esc(CAMPAIGN_NAMES.get(r.campaign) || r.campaign || '—')}</td><td>${num(r.accepted)}</td><td>${num(r.clicks)}</td><td>${num(r.views)}</td><td>${num(r.demos)}</td><td>${num(r.ava)}</td><td>${num(r.sample_quotes)}</td><td>${num(r.forms)}</td><td>${num(r.meetings)}</td><td>${num(r.wins)}</td></tr>`).join('')}</tbody>
+      </table></div>` : '<p class="muted">Sem ações de campanha neste período.</p>'}
+    </section>
 
     <section class="card"><div class="card-h"><h2>Visitas por dia</h2><span class="muted">por origem</span></div><div class="chart" data-chart="dias"></div></section>
 
@@ -107,41 +120,8 @@ export async function render(ctx) {
   const hd = Object.fromEntries(horas.map((h) => [h, { v: 0 }]));
   for (const r of t.hours) if (hd[String(r.h)]) hd[String(r.h)].v = r.n;
   columns(P.querySelector('[data-chart="horas"]'), { title: 'Visitas por hora', labels: horas, data: hd, height: 180, series: [{ key: 'v', label: 'Visitas', color: 'var(--s1)' }], labelFmt: (h, short) => (short ? `${h}h` : `${h}h–${Number(h) + 1}h`) });
-  const igEl = P.querySelector('[data-chart="ig"]');
-  if (igEl) {
-    const rows = (ig.rows || []).filter((r) => r.reach != null);
-    const ib = buckets(t.from, rows.map((r) => ({ d: r.day, n: r.reach })), () => 'v');
-    columns(igEl, { title: 'Alcance no Instagram', labels: ib.labels, data: ib.data, height: 170, series: [{ key: 'v', label: 'Contas alcançadas', color: 'var(--s2)' }], labelFmt: dayLabel });
-  }
   P.querySelectorAll('[data-tip]').forEach((el) => {
     el.addEventListener('mousemove', (e) => showTip(e, el.dataset.tip));
     el.addEventListener('mouseleave', hideTip);
   });
-}
-
-/** Bloco do Instagram: números do perfil (API oficial) + visitas que o Instagram mandou para o site. */
-function igCard(ig, t) {
-  const bio = 'https://pipeherostudio.digital/?utm_source=instagram';
-  const dica = `<p class="faint" style="margin:10px 0 0;font-size:12.5px">Dica: use <span class="mono">${bio}</span> como link da bio e dos stories para o painel contar certinho as visitas vindas do Instagram.</p>`;
-  if (!ig.connected) {
-    return `<section class="card"><div class="card-h"><h2>Instagram</h2><span class="badge">não ligado</span><a class="end btn sm" href="#/integrations">${icon('plug')}Ligar o Instagram</a></div>
-      <p class="muted" style="margin:0">Visitas que o Instagram mandou para o site neste período: <b style="color:var(--ink)">${num(t.igVisits || 0)}</b>. Ligue o @pipehero.studio em Integrações para ver também seguidores, alcance e visitas ao perfil.</p>${dica}</section>`;
-  }
-  const rows = ig.rows || [];
-  const soma = (k) => rows.reduce((a, r) => a + (r[k] || 0), 0);
-  const comSeg = rows.filter((r) => r.followers != null);
-  const seg = ig.last?.followers ?? null;
-  const var_ = comSeg.length > 1 ? comSeg[comSeg.length - 1].followers - comSeg[0].followers : null;
-  const box = (l, v, f) => `<div class="tile"><span class="label">${l}</span><span class="value">${v}</span><span class="foot">${f}</span></div>`;
-  return `<section class="card"><div class="card-h"><h2>Instagram</h2>${ig.username ? `<span class="muted">@${esc(ig.username)}</span>` : ''}
-      <a class="end btn sm" href="https://instagram.com/${esc(ig.username || 'pipehero.studio')}" target="_blank" rel="noopener">${icon('ext')}Abrir perfil</a></div>
-    ${ig.error ? `<p class="notice err" style="margin:0 0 12px">${icon('alert')}<span>Última leitura falhou: ${esc(ig.error)}</span></p>` : ''}
-    <div class="tiles" style="margin-bottom:14px">
-      ${box('Seguidores', seg == null ? '—' : num(seg), var_ == null ? 'atualiza 1x por dia' : `${var_ >= 0 ? '+' : ''}${num(var_)} no período`)}
-      ${box('Contas alcançadas', num(soma('reach')), 'soma do período')}
-      ${box('Visitas ao perfil', num(soma('profile_views')), 'soma do período')}
-      ${box('Cliques no link', num(soma('website_clicks')), 'link da bio')}
-      ${box('Visitas ao site', num(t.igVisits || 0), 'vindas do Instagram')}
-    </div>
-    <div class="chart" data-chart="ig"></div>${dica}</section>`;
 }

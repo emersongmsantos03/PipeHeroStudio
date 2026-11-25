@@ -1,0 +1,79 @@
+---
+import Base from '../layouts/Base.astro';
+import '../styles/pipehero-home.css';
+const steps = [
+  ['Answer and qualify every lead', 'Ava answers service questions day and night and asks the right follow-ups, so each lead arrives with the vehicle, service, photos, name and phone.'],
+  ['Book and keep your systems current', 'She offers open times from your booking tool, books, reschedules and cancels, and updates the record in your CRM.'],
+  ['Watch over the operation', 'Ask Ava what’s on today, which leads need a follow-up or how many coatings you did this month. She flags what needs your attention.'],
+];
+---
+<Base lang="en" page="home" title="Websites & AI for Auto Detailing Shops | Pipe Hero Studio" description="A website for your detailing shop, plus Ava: an AI that supervises your CRM and booking calendar, qualifies leads and handles the busywork.">
+  <div class="phs-home">
+    <section class="wrap phs-hero">
+      <div class="phs-hero-copy">
+        <p class="phs-eyebrow">Websites &amp; AI for auto detailers</p>
+        <h1>Turn more visits into <em>detailing jobs.</em></h1>
+        <p class="phs-intro">Start with a website that shows off your work. Add Ava, the AI that supervises your CRM and booking calendar, qualifies every lead and does the busywork, so you spend your time on cars.</p>
+        <div class="phs-actions">
+          <a class="phs-button" href="/en/demo/" data-campaign-link>Explore the detailing demo <span aria-hidden="true">↗</span></a>
+          <a class="phs-text-link" href="#plans">See pricing <span aria-hidden="true">↓</span></a>
+        </div>
+      </div>
+      <a class="phs-demo-image" href="/en/demo/" aria-label="Open the Northline Detailing demo website" data-campaign-link>
+        <img src="/images/pipehero-detailing.webp" alt="Graphite sports coupe reflecting warm inspection lights in a detailing garage" width="1200" height="800" fetchpriority="high" />
+        <span class="phs-demo-caption">
+          <span><small>Live demo website</small><strong>Northline Detailing</strong></span>
+          <span class="phs-arrow" aria-hidden="true">↗</span>
+        </span>
+      </a>
+    </section>
+
+    <section class="phs-how" id="how-it-works">
+      <div class="wrap phs-how-grid">
+        <div>
+          <p class="phs-eyebrow">From first hello to booked job</p>
+          <h2>Meet Ava, the AI that runs your front desk.</h2>
+          <ol class="phs-steps">
+            {steps.map(([title, description], index) => <li>
+              <span aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+              <div><h3>{title}</h3><p>{description}</p></div>
+            </li>)}
+          </ol>
+          <div class="phs-actions">
+            <a class="phs-button" href="/en/demo/#ava" data-campaign-link>Try Ava with a photo <span aria-hidden="true">↗</span></a>
+            <a class="phs-text-link" href="/en/demo/#shop-view" data-campaign-link>Try the owner view <span aria-hidden="true">↗</span></a>
+          </div>
+        </div>
+        <div class="phs-chat-preview" aria-label="Example conversation with Ava">
+          <div class="phs-preview-header"><img src="/images/ava-detailing-v2.webp" alt="" width="40" height="40" /><span><strong>Ava</strong><small>Northline Detailing</small></span></div>
+          <div class="phs-preview-log">
+            <p class="phs-preview-user">Can I book an interior detail for my CR-V this week?</p>
+            <p class="phs-preview-av">Sure! I have tomorrow at 2:00 PM or Friday at 9:00 AM. Which works? I’ll just need your name and phone.</p>
+            <div class="phs-preview-photo"><img src="/images/detailing-polish.webp" loading="lazy" alt="" width="90" height="62" /><span><strong>Booked · Tomorrow 2:00 PM</strong><small>Added to the calendar and CRM</small></span></div>
+          </div>
+          <a href="/en/demo/#ava" data-campaign-link>Open the live chat <span aria-hidden="true">↗</span></a>
+        </div>
+      </div>
+    </section>
+
+    <section class="wrap phs-plans" id="plans">
+      <p class="phs-eyebrow">Pricing</p>
+      <h2>Start with the site. Add Ava when you need it.</h2>
+      <div class="phs-plan-grid">
+        <article>
+          <h3>Detailing website</h3>
+          <p class="phs-price">US$100 <small>/ €100 one-time</small></p>
+          <p>Most shops start here. Show your services and your best work on a mobile-friendly site with a quote request form. See the preview before you pay.</p>
+          <a class="phs-button phs-outline" href="/en/contact/?servico=site" data-campaign-link>Request my website <span aria-hidden="true">↗</span></a>
+        </article>
+        <article>
+          <h3>Managed Ava assistant</h3>
+          <p class="phs-price">Custom quote <small>/ monthly</small></p>
+          <p>Ava works on top of the CRM and booking tool you already use. She qualifies leads in chat, books and reschedules, keeps records current, follows up and briefs you on the day. Monthly pricing depends on the setup and integrations.</p>
+          <a class="phs-button" href="/en/contact/?servico=agents" data-campaign-link>Talk to us about Ava <span aria-hidden="true">↗</span></a>
+        </article>
+      </div>
+      <p class="phs-region">Serving detailing shops in the US, Canada and Ireland. Website pricing is in US dollars for the US and Canada and in euros for Ireland.</p>
+    </section>
+  </div>
+</Base>

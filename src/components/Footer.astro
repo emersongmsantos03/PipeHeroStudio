@@ -8,22 +8,19 @@ interface Props { lang: Lang }
 const { lang } = Astro.props;
 const d = t(lang);
 const year = new Date().getFullYear();
-const wa = config.whatsapp.replace(/\D/g, '');
 ---
 <footer class="site-footer">
   <div class="wrap">
     <div class="footer-grid">
       <div>
         <a class="brand" href={href(lang, 'home')} aria-label={d.ui.homeLabel}><Logo /><span>Pipe Hero Studio</span></a>
-        <p class="footer-line">{d.brandLine}</p>
+        <p class="footer-line">Websites & AI for auto detailers.</p>
       </div>
       <div>
         <h2>{d.ui.footerServices}</h2>
         <ul>
-          <li><a class="link" href={href(lang, 'sites')}>{d.ui.nav.sites}</a></li>
-          <li><a class="link" href={href(lang, 'crm')}>{d.ui.nav.crm}</a></li>
-          <li><a class="link" href={href(lang, 'agents')}>{d.ui.nav.agents}</a></li>
-          <li><a class="link" href={href(lang, 'clinics')}>{d.ui.nav.clinics}</a></li>
+          <li><a class="link" href="/en/demo/" data-campaign-link>Live demo</a></li>
+          <li><a class="link" href="/en/#plans">Pricing</a></li>
         </ul>
       </div>
       <div>
@@ -32,7 +29,6 @@ const wa = config.whatsapp.replace(/\D/g, '');
           <li><a class="link" href={href(lang, 'contact')}>{d.ui.nav.contact}</a></li>
           <li><a class="link" href={`mailto:${config.email}`}>{config.email}</a></li>
           <li><a class="link" href={href(lang, 'book')}>{d.ui.nav.book}</a></li>
-          {wa && <li><a class="link" href={`https://wa.me/${wa}`} rel="noopener">WhatsApp</a></li>}
         </ul>
       </div>
       <div>

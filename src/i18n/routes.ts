@@ -12,6 +12,7 @@ export const DEFAULT_LANG: Lang = 'en';
 /** Slugs traduzidos. A chave é a mesma página nos três idiomas. */
 export const ROUTES = {
   home: { pt: '', en: '', es: '' },
+  demo: { pt: 'demo', en: 'demo', es: 'demo' },
   sites: { pt: 'sites', en: 'websites', es: 'webs' },
   clinics: { pt: 'assistente-clinicas', en: 'clinic-assistant', es: 'asistente-clinicas' },
   crm: { pt: 'automacao-crm', en: 'crm-automation', es: 'automatizacion-crm' },

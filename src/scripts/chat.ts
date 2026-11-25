@@ -1,8 +1,10 @@
+import { typingDots } from './typing-dots';
+
 /* Chat de IA: interface, histórico na sessão e respostas em streaming de /api/chat. */
 
 type Msg = { role: 'user' | 'assistant'; content: string };
 type Strings = {
-  greeting: string; chips: string[]; err: string; rate: string; long: string; sent: string; email: string; lang: string;
+  greeting: string; typing: string; chips: string[]; err: string; rate: string; long: string; sent: string; email: string; lang: string;
 };
 type State = { sid: string; messages: Msg[]; leadSent: boolean };
 
@@ -107,8 +109,7 @@ async function submit(text: string) {
   autosize();
 
   const out = bubble('assistant', '');
-  out.innerHTML = '<span class="cb-typing" aria-hidden="true"><i></i><i></i><i></i></span>';
-  out.setAttribute('aria-busy', 'true');
+  out.append(typingDots(S.typing, 'cb-typing'));
   toBottom();
 
   let reply = '';
@@ -145,7 +146,6 @@ async function submit(text: string) {
     failed = S.err;
   }
 
-  out.removeAttribute('aria-busy');
   if (reply) {
     state.messages.push({ role: 'assistant', content: reply });
   } else {

@@ -1,4 +1,6 @@
 // Página "Marcar chamada": fuso → dia → hora → dados → confirmação.
+import { campaignFromBrowser } from './campaign-browser';
+
 type T = Record<string, any>;
 const root = document.querySelector<HTMLElement>('[data-book]');
 if (root) {
@@ -106,7 +108,7 @@ if (root) {
     btn.textContent = t.sending;
     try {
       const r = await fetch('/api/book', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ start: chosen, name: v('name'), email: v('email'), business: v('business'), phone: v('phone'), notes: v('notes'), website: v('website'), timezone: tz(), lang: t.lang }) });
+        body: JSON.stringify({ start: chosen, name: v('name'), email: v('email'), business: v('business'), phone: v('phone'), notes: v('notes'), website: v('website'), timezone: tz(), lang: t.lang, ...campaignFromBrowser() }) });
       const j = await r.json().catch(() => ({}));
       if (r.status === 409 || j.error === 'taken') { err.textContent = t.taken; await load(); show('pick'); return; }
       if (!r.ok || !j.ok) { err.textContent = j.error === 'validation' ? t.invalid : t.fail; return; }

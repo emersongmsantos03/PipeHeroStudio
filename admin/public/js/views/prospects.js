@@ -1,5 +1,7 @@
+import { mountReviewQueue } from './prospector-review.js';
+import { mountProspectorMail } from './prospector-mail.js';
 // Prospecção: todos os negócios que o prospector encontrou, com o estado de cada um, e-mails enviados e "não contatar".
-import { api, esc, num, date, dateTime, icon, toast, modal } from '../lib.js';
+import { api, esc, num, date, icon, toast, modal } from '../lib.js';
 
 const STATUS = [
   ['', 'Todos'], ['qualificado', 'Na fila'], ['contatado', 'Contatados'], ['respondeu', 'Responderam'], ['interessado', 'Interessados'],
@@ -24,10 +26,12 @@ export async function render(ctx) {
   const pages = Math.max(1, Math.ceil(d.total / 50));
 
   ctx.page.innerHTML = `
+    <div data-prospector-mail></div>
+    <div data-prospector-review></div>
     <section class="tiles">
       <div class="tile"><span class="label">Negócios encontrados</span><span class="value">${num(e.total)}</span><span class="foot">${num(e.com_email)} com e-mail</span></div>
       <div class="tile"><span class="label">Na fila para enviar</span><span class="value">${num(c.qualificado)}</span><span class="foot">${num(c.encontrado)} ainda em análise</span></div>
-      <div class="tile"><span class="label">Contatados</span><span class="value">${num((c.contatado || 0) + (c.respondeu || 0) + (c.interessado || 0))}</span><span class="foot">${num(e.emails)} e-mails no total · ${num(e.cliques)} cliques</span></div>
+      <div class="tile"><span class="label">Contatados</span><span class="value">${num((c.contatado || 0) + (c.respondeu || 0) + (c.interessado || 0))}</span><span class="foot">${num(e.emails)} e-mails na lista · ${num(e.cliques)} contatos com clique</span></div>
       <div class="tile"><span class="label">Responderam</span><span class="value">${num((c.respondeu || 0) + (c.interessado || 0))}</span><span class="foot">${num(c.interessado)} interessados</span></div>
       <div class="tile"><span class="label">Não contatar</span><span class="value">${num(d.dnc)}</span><span class="foot">saíram, inválidos ou marcados</span></div>
     </section>
@@ -44,6 +48,8 @@ export async function render(ctx) {
       <div class="toolbar" style="justify-content:space-between;margin-top:10px"><span class="muted">${num(d.total)} resultado(s) · página ${d.page} de ${pages}</span>
         <span><button class="btn sm" data-prev ${d.page <= 1 ? 'disabled' : ''}>Anterior</button> <button class="btn sm" data-next ${d.page >= pages ? 'disabled' : ''}>Seguinte</button></span></div>
     </section>`;
+  mountProspectorMail(ctx);
+  mountReviewQueue(ctx);
 
   const P = ctx.page;
   P.querySelector('[data-sort]').value = st.sort;

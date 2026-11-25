@@ -113,11 +113,6 @@ const en: Dict = {
         sections: [['About us', 'Who we are'], ['Services', 'What we do'], ['Contact', 'How to reach us']],
       },
     },
-    heroExamples: [
-      { name: 'The Corner Table', type: 'restaurant' },
-      { name: 'Aurora Clinic', type: 'clinic' },
-      { name: 'Ribeiro Auto', type: 'garage' },
-    ],
     siteExamples: [
       { name: 'Bright Home', type: 'cleaning' },
       { name: 'Lumi Salon', type: 'salon' },
@@ -126,18 +121,14 @@ const en: Dict = {
   },
 
   hero: {
-    eyebrow: 'Websites & AI for small businesses',
-    title: 'A professional website in 48 hours. Pay only if you love it.',
+    title: "A website in 48 business hours.",
     nameLabel: "What's your business called?",
     namePh: 'e.g. Moonlight Bakery',
     typeLabel: 'Type of business',
-    ctaNote: 'Ready in 48 business hours · You see it first · Nothing to pay upfront',
-    lead: 'Type your business name and watch your site take shape right now. {price}, one-off, zero risk. Need more later? We add chat, CRM and AI agents.',
+    lead: "After a 15-minute call. Includes a mobile-friendly design, a contact form and WhatsApp.",
     book: 'Book a free 15-min call',
-    cta: 'I want my website',
+    previewAction: "Customize the preview",
     yourPreview: 'Your preview',
-    examplesLabel: 'Examples',
-    showExample: 'Show example {n}',
     live: 'Preview updated: {name}, {type}.',
   },
 
@@ -560,15 +551,15 @@ const en: Dict = {
     h1: 'Privacy policy',
     sections: [
       ['Who is responsible', ["Pipe Hero Studio is {founder}'s studio and is responsible for the data collected on this website. {legal}", 'For any question about your data: {email}.']],
-      ['What we collect', ['Only what you send us through the form: name, business, country, email, phone (if you give it), service of interest and message.', 'If you write to us by email, WhatsApp or Instagram, we also process the data in that conversation.', 'This website uses no tracking cookies and no analytics tools.']],
+      ['What we collect', ['Only what you send us through the form: name, business, country, email, phone (if you give it), service of interest and message.', 'If you write to us by email, WhatsApp or Instagram, we also process the data in that conversation.', 'This website uses no tracking cookies. We count site visits and demo actions without storing chat text, photos or IP addresses in our analytics. Campaign links may be remembered in your current tab for up to 30 minutes so we can connect visits and enquiries from the same campaign.']],
       ['Why', ["To reply to your request, prepare a proposal and, if we go ahead, deliver the service. We don't send newsletters or sell data."]],
       ['Legal basis', ['Steps taken at your request before a contract, and performance of the contract (Article 6(1)(b) GDPR). To meet legal obligations such as invoicing, Article 6(1)(c).']],
-      ['Who else has access', ['Cloudflare, Inc. (USA), which hosts the website and processes the form to email us your request. Transfers to the USA are covered by the EU-US Data Privacy Framework and Standard Contractual Clauses approved by the European Commission.', 'OpenAI, L.L.C. (USA), which processes AI chat messages to generate replies. Transfers are covered by the EU-US Data Privacy Framework and Standard Contractual Clauses.', 'Our email provider and the automation tool that forwards requests to our inbox and CRM.', 'Fonts are hosted on this website: when you open a page, your browser does not contact Google or any other third party.']],
-      ['AI chat', ['The website assistant is an AI and always says so. The messages you write are sent to OpenAI to generate replies and are not used to train models.', 'If you agree, the assistant sends us a summary of the conversation and the contact details you gave, only so we can reply. That summary is kept for up to 12 months.', 'The conversation is stored only in your browser while the tab is open. Please do not share sensitive data in the chat.']],
+      ['Who else has access', ['Cloudflare, Inc. (USA), which hosts the website and processes the form to email us your request. Transfers to the USA are covered by the EU-US Data Privacy Framework and Standard Contractual Clauses approved by the European Commission.', 'Our email provider and the automation tool that forwards requests to our inbox and CRM.', 'Fonts are hosted on this website: when you open a page, your browser does not contact Google or any other third party.']],
+      ['AI chat', ["The chat uses an AI model running on Pipe Hero Studio’s computer. Cloudflare temporarily relays messages from our main website chat to generate a reply. The Northline Detailing demo sends your message and any selected photo to OpenAI for a response.", "If you want to speak with the team, submit the contact form. The team receives the details you enter to reply to your request.", "Demo quote requests stay in the current tab. We do not store demo chat messages or photos in our CRM. Use sample details and leave out people, number plates or other identifying information."]],
       ['How long', ["Requests that don't lead to work: up to 12 months after the last contact.", 'Client data: for as long as the service lasts and then for the period required by tax law.']],
       ['Your rights', ['You can ask to access, correct, delete, restrict or port your data, or object to its processing, by writing to {email}. We reply within one month.']],
       ['Complaints', ['You can lodge a complaint with the data protection authority in your country.']],
-      ['Changes', ['If this policy changes, we update the date at the top. If we ever use analytics, we will only turn it on with your prior consent.']],
+      ['Changes', ['If this policy changes, we update the date at the top.']],
     ],
   },
 

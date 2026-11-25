@@ -8,6 +8,7 @@ import ContactForm from '../components/ContactForm.astro';
 import CopyEmail from '../components/CopyEmail.astro';
 import Faq from '../components/Faq.astro';
 import Arrow from '../components/Arrow.astro';
+import OfferDemo from '../components/OfferDemo.astro';
 import { t, fill } from '../i18n';
 import { href, price, CURRENCY, type Lang } from '../i18n/routes';
 import type { BizType } from '../lib/minisite';
@@ -43,16 +44,18 @@ const schema = [
     <div class="lhero-text">
       <p class="tag"><b>01</b><span aria-hidden="true">/</span>{d.home.stations[0].name}</p>
       <h1 id="sites-title">{s.hero.title}</h1>
-      <p class="h3-strong"><span class="hl">{s.hero.strong}</span></p>
+      <p class="site-hero-strong"><span class="hl">{s.hero.strong}</span></p>
       <p class="lead">{s.hero.lead}</p>
+      <p class="site-hero-price"><b>{sitePrice}</b> <span>{s.hero.priceNote}</span></p>
       <div class="lhero-cta">
         <a class="btn btn-hero" href="#pedido">{s.hero.cta}<Arrow /></a>
-        <p class="price-chip"><b>{sitePrice}</b> <span>{s.hero.priceNote}</span></p>
+        <a class="link link-arrow" href="#demo-site">{({ en: 'Try the demo', pt: 'Testar demonstração', es: 'Probar la demostración' })[lang]}<Arrow /></a>
+        <a class="link link-arrow" href={href(lang, 'book')} data-campaign-link>{d.hero.book}<Arrow /></a>
       </div>
     </div>
 
     <figure class="lhero-visual ex">
-      <fieldset class="ex-tabs">
+      <fieldset class="website-example-tabs">
         <legend class="sr-only">{s.examples.legend}</legend>
         {examples.map((e, i) => (
           <>
@@ -71,6 +74,8 @@ const schema = [
       <figcaption class="ex-cap"><span class="tag-example">{d.ui.example}</span> <span class="muted">{s.examples.text}</span></figcaption>
     </figure>
   </section>
+
+  <OfferDemo lang={lang} offer="website" />
 
   <div class="line wrap">
     <Station side="left" code="01.1" name={s.includes.name} labelledby="s-inc" start>
@@ -130,15 +135,6 @@ const schema = [
 </Base>
 
 <style>
-  .h3-strong { font-family: var(--f-display); font-weight: 600; font-size: clamp(1.3rem, 1rem + 1.4vw, 2rem); letter-spacing: -0.02em; line-height: 1.2; }
-  .price-chip { display: inline-flex; align-items: baseline; gap: 8px; font-family: var(--f-mono); font-size: 0.9rem; color: var(--muted); }
-  .price-chip b { font-family: var(--f-display); font-weight: 800; font-size: 1.5rem; color: var(--ink); letter-spacing: -0.03em; }
-
-  .ex-tabs { border: 0; margin: 0; padding: 4px; display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
-  .ex-tabs label { cursor: pointer; padding: 8px 14px; min-height: 40px; display: inline-flex; align-items: center; border-radius: 8px; font-size: 0.92rem; font-weight: 500; color: var(--muted); }
-  .ex-tabs label:hover { color: var(--ink); }
-  .ex-tabs input:checked + label { background: var(--hero); color: var(--on-hero); }
-  .ex-tabs input:focus-visible + label { outline: 3px solid var(--ink); outline-offset: 2px; }
   .ex-stack { height: 100%; }
   .ex-slide { height: 100%; display: none; }
   .ex-slide[data-i='0'] { display: block; }

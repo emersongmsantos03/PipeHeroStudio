@@ -5,7 +5,7 @@ import {
   getPref, setPref, probOf, STAGE_PROB, tagChips, tagsOf, dueLabel, dueClass, daysSince, menu, parseCsv, debounce,
 } from '../lib.js';
 
-const SERVICE_OPTIONS = [['website', 'Site'], ['chat', 'Chat IA'], ['crm', 'CRM'], ['ai_agents', 'Agentes IA'], ['clinic_assistant', 'Clínicas'], ['other', 'Outro']];
+const SERVICE_OPTIONS = [['website', 'Site'], ['chat', 'Chat IA'], ['crm', 'CRM'], ['ai_agents', 'Agentes IA'], ['clinic_assistant', 'Clínicas'], ['realtor_crm', SERVICES.realtor_crm], ['study_budget', SERVICES.study_budget], ['other', 'Outro']];
 const OPEN = ['new', 'contacted', 'meeting', 'proposal'];
 const STALE_DAYS = 7;
 

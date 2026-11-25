@@ -18,7 +18,7 @@ const { lang } = Astro.props;
 const d = t(lang);
 const h = d.home;
 const sitePrice = price(lang, config.sitePrice, d.ui.onRequest);
-const ex = d.minisite.heroExamples;
+const ex = d.minisite.siteExamples;
 const first = ex[0];
 
 /* Textos curtos dos mockups das estações (fictícios, marcados "Exemplo"). */
@@ -50,17 +50,44 @@ const builderData = {
   yourPreview: d.hero.yourPreview,
   live: d.hero.live,
 };
+const offers = {
+  pt: { heading: 'Outros produtos', realtor: 'CRM para imobiliárias', study: 'Kit Estudos e Orçamento' },
+  en: { heading: 'More from Pipe Hero Studio', realtor: 'Real Estate CRM', study: 'Study & Budget Kit' },
+  es: { heading: 'Otros productos', realtor: 'CRM inmobiliario', study: 'Kit de Estudios y Presupuesto' },
+}[lang];
+const contact = href(lang, 'contact');
 const sides = ['left', 'right', 'left', 'right'] as const;
 ---
 <Base lang={lang} page="home" title={h.title} description={h.description}>
-  <section class="hero wrap" aria-labelledby="hero-title" data-builder-root>
-    <div class="hero-text">
-      <p class="tag">{d.hero.eyebrow}</p>
+  <section class="lhero home-hero wrap" aria-labelledby="hero-title" data-builder-root>
+    <div class="lhero-text">
       <h1 id="hero-title">{d.hero.title}</h1>
-      <p class="lead">{fill(d.hero.lead, { price: sitePrice })}</p>
+      <p class="site-hero-strong"><span class="hl">{d.sites.hero.strong}</span></p>
+      <p class="lead">{d.hero.lead}</p>
+      <p class="site-hero-price"><b>{sitePrice}</b> <span>{d.sites.hero.priceNote}</span></p>
+      <div class="lhero-cta">
+        <a class="btn btn-hero" href={href(lang, 'sites', 'pedido')} data-campaign-link>{d.sites.hero.cta}<Arrow /></a>
+        <a class="link link-arrow" href={href(lang, 'book')} data-campaign-link>{d.hero.book}<Arrow /></a>
+      </div>
+    </div>
 
-      <form class="builder panel" action={href(lang, 'sites')} method="get" data-builder>
-        <div class="b-row">
+    <div class="lhero-visual home-showcase">
+      <figure class="home-examples">
+        <div class="website-example-tabs" role="group" aria-label={d.sites.examples.legend}>
+          {ex.map((e, i) => (
+            <button type="button" aria-pressed={i === 0 ? 'true' : 'false'} data-example={i}>{d.minisite.types[e.type as BizType].label}</button>
+          ))}
+        </div>
+        <PhoneMock size="lg">
+          <MiniSite lang={lang} name={first.name} type={first.type as BizType} />
+        </PhoneMock>
+        <figcaption class="tag-example" data-builder-badge>{d.ui.example}</figcaption>
+        <p class="sr-only" aria-live="polite" data-builder-live></p>
+      </figure>
+
+      <details class="preview-details panel">
+        <summary>{d.hero.previewAction}</summary>
+        <form class="builder" action={href(lang, 'sites', 'pedido')} method="get" data-builder>
           <div class="field">
             <label for="b-name">{d.hero.nameLabel}</label>
             <input id="b-name" name="nome" type="text" maxlength="40" autocomplete="organization" placeholder={d.hero.namePh} data-builder-name />
@@ -68,34 +95,22 @@ const sides = ['left', 'right', 'left', 'right'] as const;
           <div class="field">
             <label for="b-type">{d.hero.typeLabel}</label>
             <select id="b-type" name="tipo" data-builder-type>
-              {BIZ_TYPES.map((k) => <option value={k}>{d.minisite.types[k].label}</option>)}
+              {BIZ_TYPES.map((k) => <option value={k} selected={k === first.type}>{d.minisite.types[k].label}</option>)}
             </select>
           </div>
-        </div>
-        <p class="b-note">{d.hero.ctaNote}</p>
-        <div class="b-actions">
-          <button type="submit" class="btn btn-hero">{d.hero.cta}<Arrow /></button>
-          <a class="b-book" href={href(lang, 'book')}>{d.hero.book}<Arrow /></a>
-        </div>
-      </form>
+          <button type="submit" class="btn btn-hero">{d.sites.hero.cta}<Arrow /></button>
+        </form>
+      </details>
     </div>
-
-    <figure class="hero-phone">
-      <div class="hp-top">
-        <span class="tag-example" data-builder-badge>{d.ui.example}</span>
-        <div class="b-dots" role="group" aria-label={d.hero.examplesLabel}>
-          {ex.map((_, i) => (
-            <button type="button" aria-label={fill(d.hero.showExample, { n: String(i + 1) })} aria-pressed={i === 0 ? 'true' : 'false'} data-example={i}></button>
-          ))}
-        </div>
-      </div>
-      <PhoneMock>
-        <MiniSite lang={lang} name={first.name} type={first.type as BizType} />
-      </PhoneMock>
-      <figcaption class="sr-only">{d.minisite.preview}</figcaption>
-      <p class="sr-only" aria-live="polite" data-builder-live></p>
-    </figure>
     <script is:inline type="application/json" data-builder-data set:html={JSON.stringify(builderData)} />
+  </section>
+
+  <section class="wrap offer-nav" aria-labelledby="offer-title">
+    <h2 id="offer-title">{offers.heading}</h2>
+    <div class="offer-links">
+      <a class="btn" href={`${contact}?interesse=realtor_crm`}>{offers.realtor}<Arrow /></a>
+      <a class="btn" href={`${contact}?interesse=study_budget`}>{offers.study}<Arrow /></a>
+    </div>
   </section>
 
   <div class="line wrap">
@@ -211,38 +226,26 @@ const sides = ['left', 'right', 'left', 'right'] as const;
 </script>
 
 <style>
-  .hero {
-    display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: clamp(32px, 5vw, 72px);
-    align-items: center; padding-block: clamp(40px, 7vw, 96px) clamp(32px, 5vw, 64px);
+  .offer-nav { padding-block: 2rem; }
+  .offer-links { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1rem; }
+
+  .home-hero { padding-block: clamp(32px, 5vw, 72px) clamp(32px, 5vw, 64px); }
+  .home-hero h1 { max-width: 15ch; font-size: clamp(2.35rem, 1.45rem + 3.35vw, 4.2rem); }
+  .home-hero .lead { max-width: 46ch; }
+  @media (min-width: 900px) {
+    .home-hero .lhero-text { align-self: start; padding-block-start: clamp(90px, 10vw, 145px); }
   }
-  .hero-text { display: grid; gap: 20px; }
-  .hero h1 { max-width: 18ch; font-size: clamp(2.3rem, 1.3rem + 3.4vw, 4.1rem); }
-  .builder { display: grid; gap: 16px; padding: clamp(18px, 2.5vw, 26px); margin-top: 12px; max-width: 620px; }
-  .b-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 14px; }
+  .home-examples { display: grid; justify-items: center; gap: 14px; width: 100%; }
+  .home-showcase :global(.phone-lg) { --phone-w: 315px; }
+  .preview-details { width: min(100%, 360px); }
+  .preview-details summary { cursor: pointer; min-height: 46px; padding: 11px 16px; font-weight: 500; }
+  .builder { display: grid; gap: 13px; padding: 4px 16px 16px; }
   .builder .field { display: grid; gap: 6px; }
-  .builder label { font-weight: 500; font-size: 0.95rem; }
-  .builder input, .builder select {
-    width: 100%; min-height: 52px; padding: 12px 14px; background: var(--bg);
-    border: 1.5px solid var(--line-strong); border-radius: 8px; font-size: 1.05rem;
-  }
-  .builder input:focus-visible, .builder select:focus-visible { outline: none; border-color: var(--ink); box-shadow: 0 0 0 3px color-mix(in srgb, var(--hero) 70%, transparent); }
-  .builder input::placeholder { color: var(--muted); opacity: 0.8; }
-  .b-note { font-weight: 500; }
-  .b-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 22px; }
-  .b-book { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; color: var(--ink); text-underline-offset: 4px; }
-  .b-book:hover { text-decoration-thickness: 2px; }
-  .b-book svg { width: 1em; height: 1em; }
-  .hero-phone { display: grid; justify-items: center; gap: 14px; }
-  .hp-top { display: flex; align-items: center; justify-content: space-between; width: min(100%, 290px); min-height: 28px; }
-  .b-dots { display: flex; gap: 4px; }
-  .b-dots button { width: 32px; height: 32px; border: 0; background: none; padding: 0; cursor: pointer; display: grid; place-items: center; border-radius: 8px; }
-  .b-dots button::before { content: ''; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--muted); transition: background-color 0.2s, border-color 0.2s, width 0.25s; }
-  .b-dots button[aria-pressed='true']::before { width: 22px; border-radius: 6px; background: var(--hero); border-color: var(--ink); }
+  .builder .btn { justify-self: start; }
   @media (max-width: 899px) {
-    .hero { grid-template-columns: minmax(0, 1fr); }
-    .hero-phone :global(.phone) { --phone-w: 270px; }
+    .home-hero .lhero-text { gap: 16px; }
+    .home-showcase :global(.phone-lg) { --phone-w: 280px; }
   }
-  @media (max-width: 560px) { .b-row { grid-template-columns: minmax(0, 1fr); } .builder .btn { justify-self: stretch; } }
 
   .changes { display: grid; gap: 12px; padding-top: 6px; }
   .st-links { display: flex; flex-wrap: wrap; gap: 10px 24px; }

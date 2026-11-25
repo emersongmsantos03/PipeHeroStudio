@@ -5,10 +5,13 @@
  * - tudo o resto: ficheiros estáticos do Astro (dist/).
  */
 import { WorkerEntrypoint } from 'cloudflare:workers';
+import { handleDetailingDemo } from './detailing-demo';
 import { handleChat, type ChatEnv } from './chat';
 import { notifyWhatsApp } from './notify';
 import { ADMIN_URL, logEvent, saveLead, sendMail, sendViaResend, type Mail } from '../shared/crm';
 import { brt, freeSlots, loadRules } from '../shared/booking';
+import { readCampaign } from '../shared/campaign';
+import { absolute, href } from '../src/i18n/routes';
 
 interface Env extends ChatEnv {
   ASSETS: Fetcher;
@@ -16,13 +19,14 @@ interface Env extends ChatEnv {
   /** Opcional: endereço que recebe os pedidos (definido no painel). */
   CONTACT_TO?: string;
   BOOK_RL?: RateLimit;
+  OPENAI_API_KEY?: string;
 }
 
-const SERVICE_MAP: Record<string, string> = { site: 'website', chat: 'chat', crm: 'crm', agents: 'ai_agents', clinics: 'clinic_assistant', unsure: 'other' };
+const SERVICE_MAP: Record<string, string> = { site: 'website', chat: 'chat', crm: 'crm', agents: 'ai_agents', clinics: 'clinic_assistant', realtor_crm: 'realtor_crm', study_budget: 'study_budget', unsure: 'other' };
 
 const DEFAULT_TO = 'emerson@pipeherostudio.digital';
 const FROM = { email: 'site@pipeherostudio.digital', name: 'Site Pipe Hero Studio' };
-const SERVICES = ['site', 'chat', 'crm', 'agents', 'clinics', 'unsure'];
+const SERVICES = Object.keys(SERVICE_MAP);
 const LANGS = ['pt', 'en', 'es'];
 const THANKS: Record<string, string> = { pt: '/pt/contacto/?enviado=1', en: '/en/contact/?sent=1', es: '/es/contacto/?enviado=1' };
 
@@ -37,6 +41,10 @@ function json(body: unknown, status = 200) {
     status,
     headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' },
   });
+}
+
+function getIsDetailing(form: FormData) {
+  return form.get('pagina') === 'contact' && form.get('segmento') === 'auto-detailing';
 }
 
 async function handleContact(request: Request, env: Env): Promise<Response> {
@@ -61,6 +69,8 @@ async function handleContact(request: Request, env: Env): Promise<Response> {
   } catch {
     return fail(400, 'bad_body');
   }
+  const campaign = readCampaign((key) => form.get(key));
+  const detailing = getIsDetailing(form);
   const get = (k: string, max = MAX.short) => String(form.get(k) ?? '').trim().slice(0, max);
 
   const lang = LANGS.includes(get('idioma')) ? get('idioma') : 'pt';
@@ -78,7 +88,7 @@ async function handleContact(request: Request, env: Env): Promise<Response> {
     servico: get('servico'),
     mensagem: get('mensagem', MAX.message),
     privacidade: get('privacidade'),
-    tipo: get('tipo', 40),
+    tipo: detailing ? 'auto-detailing' : get('tipo', 40),
     pagina: get('pagina', 40),
   };
 
@@ -115,7 +125,7 @@ async function handleContact(request: Request, env: Env): Promise<Response> {
   } catch (e) {
     console.error('contact: CRM save failed', (e as Error).message);
   }
-  await logEvent(env.DB, 'form_submit', 'site', { leadId, meta: { servico: data.servico, pagina: data.pagina, lang } });
+  await logEvent(env.DB, 'form_submit', 'site', { leadId, meta: { servico: data.servico, pagina: data.pagina, lang, detailing, ...campaign } });
 
   const link = leadId ? `${ADMIN_URL}/#/leads/${leadId}` : ADMIN_URL;
   const rows: [string, string][] = [
@@ -244,7 +254,7 @@ async function handleBook(request: Request, env: Env) {
         [data.notes, data.phone && `Telefone: ${data.phone}`, `E-mail: ${data.email}`, rules.meetingLink && `Link: ${rules.meetingLink}`].filter(Boolean).join('\n')).first<{ id: number }>();
     await env.DB.prepare(`UPDATE leads SET next_action_at = (SELECT MIN(due_date) FROM tasks WHERE lead_id = ? AND done_at IS NULL) WHERE id = ?`).bind(leadId, leadId).run();
     await env.DB.prepare('UPDATE bookings SET lead_id = ?, task_id = ? WHERE id = ?').bind(leadId, task?.id ?? null, bookingId).run();
-    await logEvent(env.DB, 'meeting_booked', 'site', { ref: data.email, leadId, meta: { start: data.start, tz: data.tz } });
+    await logEvent(env.DB, 'meeting_booked', 'site', { ref: data.email, leadId, meta: { start: data.start, tz: data.tz, ...readCampaign((key) => b[key]) } });
   } catch (e) {
     console.error('book: crm failed', (e as Error).message);
   }
@@ -284,21 +294,39 @@ async function handlePageView(request: Request, env: Env) {
   const utm = String(b.u || '').toLowerCase().replace(/[^a-z0-9._-]/g, '').slice(0, 40);
   if (utm) ref = utm;
   const country = (request as unknown as { cf?: { country?: string } }).cf?.country || null;
-  await logEvent(env.DB, 'page_view', 'site', { ref: path, meta: { ref, lang: String(b.l || '').slice(0, 5), country, device: /Mobi|Android|iPhone/i.test(ua) ? 'mobile' : 'desktop' } });
+  const campaign = readCampaign((key) => b[key]);
+  if (b.demo === 'website' || b.demo === 'crm' || b.demo === 'detailing' || b.demo === 'detailing_quote' || b.demo === 'detailing_booking') {
+    await logEvent(env.DB, 'demo_started', 'site', { ref: path, meta: { ...campaign, offer: b.demo } });
+    return new Response(null, { status: 204 });
+  }
+  await logEvent(env.DB, 'page_view', 'site', { ref: path, meta: { ref, ...campaign, lang: String(b.l || '').slice(0, 5), country, device: /Mobi|Android|iPhone/i.test(ua) ? 'mobile' : 'desktop' } });
   return new Response(null, { status: 204 });
 }
 
 /** Link rastreado dos e-mails do prospector: regista o clique (ligado ao lead) e leva para a página de websites. */
 async function handleClick(request: Request, env: Env, token: string) {
+  const query = new URL(request.url).searchParams;
+  const requestedOffer = query.get('offer');
+  const offer = requestedOffer === 'crm' || requestedOffer === 'agents' || requestedOffer === 'demo' || requestedOffer === 'home' ? requestedOffer : 'sites';
+  const segment = query.get('segment') || '';
+  const label = offer === 'sites' ? 'websites' : offer;
+  const code = offer === 'home' && segment === 'auto-detailing' ? 'detailing-website'
+    : offer === 'demo' && segment === 'ava-detailing' ? 'detailing-ava'
+    : /^[a-z0-9][a-z0-9-]{0,23}$/.test(segment) ? `${label}-${segment}` : label;
+  const campaign = { utm_source: 'prospector', utm_medium: 'email', utm_campaign: code };
   const ua = request.headers.get('User-Agent') || '';
-  if (!BOT_UA.test(ua) && /^[A-Za-z0-9_-]{4,40}$/.test(token)) {
+  if (request.method === 'GET' && !BOT_UA.test(ua) && /^[A-Za-z0-9_-]{4,40}$/.test(token)) {
     try {
-      const sent = await env.DB.prepare(`SELECT lead_id, ref FROM events WHERE type = 'email_sent' AND json_extract(meta, '$.token') = ? LIMIT 1`).bind(token).first<{ lead_id: number | null; ref: string | null }>();
-      const dup = await env.DB.prepare(`SELECT 1 FROM events WHERE type = 'email_click' AND ref = ? AND created_at > ? LIMIT 1`).bind(token, new Date(Date.now() - 60_000).toISOString()).first();
-      if (!dup) await logEvent(env.DB, 'email_click', 'agent', { ref: token, leadId: sent?.lead_id ?? null, meta: { to: sent?.ref || null, country: (request as unknown as { cf?: { country?: string } }).cf?.country || null } });
-    } catch { /* o redirecionamento nunca falha */ }
+      const sent = await env.DB.prepare(`SELECT lead_id FROM events WHERE type='email_sent' AND json_extract(meta, '$.token')=? LIMIT 1`).bind(token).first<{ lead_id: number | null }>();
+      const dup = await env.DB.prepare(`SELECT 1 FROM events WHERE type='email_click' AND ref=? AND created_at>? LIMIT 1`).bind(token, new Date(Date.now() - 60_000).toISOString()).first();
+      if (!dup) await logEvent(env.DB, 'email_click', 'agent', { ref: token, leadId: sent?.lead_id ?? null, meta: campaign });
+    } catch { /* redirect independently of tracking */ }
   }
-  return Response.redirect('https://pipeherostudio.digital/en/websites/', 302);
+  const destination = new URL(absolute(href('en', offer)));
+  if (offer === 'demo') destination.hash = 'ava';
+  if (offer === 'home') destination.hash = 'plans';
+  destination.search = new URLSearchParams(campaign).toString();
+  return Response.redirect(destination.href, 302);
 }
 
 export default {
@@ -310,6 +338,7 @@ export default {
     if (url.pathname === '/api/contact') return handleContact(request, env);
     if (url.pathname === '/api/slots') return handleSlots(request, env);
     if (url.pathname === '/api/book') return handleBook(request, env);
+    if (url.pathname === '/api/detailing-demo') return handleDetailingDemo(request, env, ctx);
     if (url.pathname === '/api/chat') return handleChat(request, env, ctx);
     if (url.pathname.startsWith('/api/')) return json({ ok: false, error: 'not_found' }, 404);
     return env.ASSETS.fetch(request);

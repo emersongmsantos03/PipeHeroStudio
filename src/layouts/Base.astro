@@ -4,7 +4,7 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import ChatWidget from '../components/ChatWidget.astro';
 import { t } from '../i18n';
-import { LANGS, LOCALE, OG_LOCALE, absolute, href, type Lang, type PageKey } from '../i18n/routes';
+import { LOCALE, OG_LOCALE, absolute, href, type Lang, type PageKey } from '../i18n/routes';
 import { config } from '../config';
 
 interface Props {
@@ -31,7 +31,7 @@ const graph = {
       url: config.siteUrl,
       email: config.email,
       logo: absolute('/apple-touch-icon.png'),
-      slogan: d.brandLine,
+      slogan: 'Websites & AI for auto detailers.',
       founder: { '@type': 'Person', name: config.founder },
     },
     {
@@ -47,7 +47,7 @@ const graph = {
     ...schema.map((s) => ({ provider: { '@id': orgId }, ...s })),
   ],
 };
-const chatOn = config.chatEnabled;
+const chatOn = config.chatEnabled && page !== 'demo';
 ---
 <!doctype html>
 <html lang={LOCALE[lang]}>
@@ -57,8 +57,6 @@ const chatOn = config.chatEnabled;
     <title>{title}</title>
     <meta name="description" content={description} />
     {noindex ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={canonical} />}
-    {!noindex && LANGS.map((l) => <link rel="alternate" hreflang={LOCALE[l]} href={absolute(href(l, page))} />)}
-    {!noindex && <link rel="alternate" hreflang="x-default" href={absolute(href('en', page))} />}
     <meta name="theme-color" content="#eef1f4" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0b1120" media="(prefers-color-scheme: dark)" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
@@ -73,32 +71,45 @@ const chatOn = config.chatEnabled;
     <meta property="og:image" content={ogImage} />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content={d.brandLine} />
+    <meta property="og:image:alt" content="Websites & AI for auto detailers." />
     <meta property="og:locale" content={OG_LOCALE[lang]} />
-    {LANGS.filter((l) => l !== lang).map((l) => <meta property="og:locale:alternate" content={OG_LOCALE[l]} />)}
     <meta name="twitter:card" content="summary_large_image" />
 
     <script is:inline type="application/ld+json" set:html={JSON.stringify(graph)} />
   </head>
-  <body>
+  <body class:list={[page === 'home' && 'site-home']}>
     <a class="skip" href="#main">{d.ui.skip}</a>
-    <Header lang={lang} page={page} />
+    {page !== 'demo' && <Header lang={lang} page={page} />}
     <main id="main" tabindex="-1">
       <slot />
     </main>
-    <Footer lang={lang} />
+    {page !== 'demo' && <Footer lang={lang} />}
     {chatOn && <ChatWidget lang={lang} />}
-    <script is:inline>
-      document.addEventListener('click', function (e) {
-        var a = e.target && e.target.closest ? e.target.closest('[data-lang]') : null;
-        if (a) { try { localStorage.setItem('phs-lang', a.getAttribute('data-lang')); } catch (_) {} }
+    <script>
+      import { campaignFromBrowser } from '../scripts/campaign-browser';
+
+      const campaign = campaignFromBrowser();
+      if (campaign.utm_source) {
+        for (const link of document.querySelectorAll<HTMLAnchorElement>('[data-campaign-link]')) {
+          const url = new URL(link.href, location.href);
+          if (url.origin !== location.origin) continue;
+          for (const [key, value] of Object.entries(campaign)) url.searchParams.set(key, value);
+          link.href = url.href;
+        }
+      }
+      function recordSiteActivity(demo?: string) {
+        try {
+          const qs = new URLSearchParams(location.search);
+          const payload = JSON.stringify({ p: location.pathname, r: document.referrer, l: document.documentElement.lang, u: campaign.utm_source || qs.get('ref') || '', ...campaign, demo });
+          if (!navigator.sendBeacon?.('/api/pv', payload)) {
+            void fetch('/api/pv', { method: 'POST', body: payload, keepalive: true }).catch(() => {});
+          }
+        } catch { /* analytics is optional */ }
+      }
+      document.addEventListener('offer-demo-started', (event) => {
+        if (event instanceof CustomEvent && typeof event.detail === 'string') recordSiteActivity(event.detail);
       });
-      try {
-        var qs = new URLSearchParams(location.search);
-        var pv = JSON.stringify({ p: location.pathname, r: document.referrer, l: document.documentElement.lang, u: qs.get('utm_source') || qs.get('ref') || '' });
-        if (navigator.sendBeacon) navigator.sendBeacon('/api/pv', pv);
-        else fetch('/api/pv', { method: 'POST', body: pv, keepalive: true });
-      } catch (_) {}
+      recordSiteActivity();
     </script>
   </body>
 </html>

@@ -10,6 +10,7 @@ interface Props { lang: Lang }
 const { lang } = Astro.props;
 const S = {
   pt: {
+    typing: 'A Ava está escrevendo',
     launch: 'Fale com a Ava', title: 'Ava', sub: 'Assistente virtual · Pipe Hero Studio',
     greeting: 'Olá! Sou a Ava, a assistente virtual da Pipe Hero Studio. Posso tirar dúvidas sobre sites, chat, CRM e agentes de IA, ou ajudar a perceber por onde começar. Em que posso ajudar?',
     chips: ['Quero um site para o meu negócio', 'Quanto custa?', 'Como funciona o "só paga se gostar"?', 'Quero falar com o Emerson'],
@@ -18,20 +19,22 @@ const S = {
     err: 'Não consegui responder agora. Tente de novo ou escreva para {email}.',
     rate: 'Muitas mensagens seguidas. Espere um minuto e tente de novo.',
     long: 'A conversa ficou longa. Para continuar, escreva para {email} ou comece uma nova conversa.',
-    sent: 'Resumo enviado ao Emerson', teaser: 'Olá, sou a Ava! Tem dúvidas? Respondo na hora.', dismiss: 'Fechar',
+    sent: 'Resumo enviado ao Emerson', teaser: 'Olá, sou a Ava! Como posso ajudar?', dismiss: 'Fechar',
   },
   en: {
+    typing: 'Ava is typing',
     launch: 'Chat with Ava', title: 'Ava', sub: 'Virtual assistant · Pipe Hero Studio',
-    greeting: "Hi! I'm Ava, Pipe Hero Studio's virtual assistant. I can answer questions about websites, chat, CRM and AI agents, or help you figure out where to start. How can I help?",
-    chips: ['I need a website for my business', 'How much does it cost?', 'How does "pay only if you like it" work?', 'I want to talk to Emerson'],
+    greeting: "Hi! I’m Ava. Ask me about a website for your detailing shop, how I can supervise your CRM and bookings, or what the demo can do.",
+    chips: ['How much is the website?', 'How does Ava work with my CRM and calendar?', 'What can I ask Ava about my shop?'],
     ph: 'Type your message…', send: 'Send', close: 'Close chat', reset: 'New conversation',
     note: 'Ava is an AI virtual assistant and can make mistakes.', privacy: 'Privacy',
     err: "I couldn't reply right now. Please try again or email {email}.",
     rate: 'Too many messages in a row. Please wait a minute and try again.',
     long: 'This conversation got long. To continue, email {email} or start a new conversation.',
-    sent: 'Summary sent to Emerson', teaser: "Hi, I'm Ava! Questions? I reply instantly.", dismiss: 'Dismiss',
+    sent: 'Summary sent to Emerson', teaser: "Hi, I'm Ava! How can I help?", dismiss: 'Dismiss',
   },
   es: {
+    typing: 'Ava está escribiendo',
     launch: 'Habla con Ava', title: 'Ava', sub: 'Asistente virtual · Pipe Hero Studio',
     greeting: '¡Hola! Soy Ava, la asistente virtual de Pipe Hero Studio. Puedo resolver dudas sobre webs, chat, CRM y agentes de IA, o ayudarte a ver por dónde empezar. ¿En qué te ayudo?',
     chips: ['Quiero una web para mi negocio', '¿Cuánto cuesta?', '¿Cómo funciona el "solo pagas si te gusta"?', 'Quiero hablar con Emerson'],
@@ -40,9 +43,11 @@ const S = {
     err: 'No he podido responder ahora. Inténtalo de nuevo o escribe a {email}.',
     rate: 'Demasiados mensajes seguidos. Espera un minuto y vuelve a intentarlo.',
     long: 'La conversación se ha alargado. Para seguir, escribe a {email} o empieza una nueva conversación.',
-    sent: 'Resumen enviado a Emerson', teaser: '¡Hola, soy Ava! ¿Dudas? Respondo al momento.', dismiss: 'Cerrar',
+    sent: 'Resumen enviado a Emerson', teaser: '¡Hola, soy Ava! ¿En qué te ayudo?', dismiss: 'Cerrar',
   },
 }[lang];
+const handoff = { pt: 'Falar com a equipe', en: 'Contact the team', es: 'Contactar con el equipo' }[lang];
+const contactUrl = href(lang, 'contact') + '?utm_source=ava&utm_medium=chat&utm_campaign=public_chat';
 const data = { ...S, email: config.email, lang };
 ---
 <div class="cb" data-chat data-i18n={JSON.stringify(data)}>
@@ -53,18 +58,16 @@ const data = { ...S, email: config.email, lang };
 
   <button type="button" class="cb-launch" data-chat-launch aria-expanded="false" aria-controls="cb-panel">
     <span class="cb-launch-ico" aria-hidden="true">
-      <img class="i-chat" src="/ava.svg" alt="" width="42" height="42" decoding="async" />
+      <img class="i-chat" src="/images/ava-detailing-v2.webp" alt="" width="42" height="42" decoding="async" />
       <svg class="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" /></svg>
     </span>
     <span class="cb-launch-txt">{S.launch}</span>
-    <span class="cb-online" aria-hidden="true"></span>
   </button>
 
   <section class="cb-panel" id="cb-panel" role="dialog" aria-modal="false" aria-labelledby="cb-title" hidden data-chat-panel>
     <header class="cb-head">
       <span class="cb-av">
-        <img src="/ava.svg" alt="" width="44" height="44" decoding="async" />
-        <i aria-hidden="true"></i>
+        <img src="/images/ava-detailing-v2.webp" alt="" width="44" height="44" decoding="async" />
       </span>
       <span class="cb-id">
         <b id="cb-title">{S.title}</b>
@@ -87,6 +90,10 @@ const data = { ...S, email: config.email, lang };
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13m-5-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg>
       </button>
     </form>
+    <div class="cb-links">
+      <a class="link cb-handoff" href={contactUrl}>{handoff}</a>
+      {lang === 'en' && <a class="link cb-handoff" href="/en/demo/#ava" data-campaign-link>Try photo chat ↗</a>}
+    </div>
     <p class="cb-note">{S.note} <a href={href(lang, 'privacy')}>{S.privacy}</a></p>
   </section>
 </div>
@@ -134,7 +141,7 @@ const data = { ...S, email: config.email, lang };
   .cb-launch:hover { transform: translateY(-2px); }
   .cb-launch-ico { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; background: var(--hero); color: var(--on-hero); }
   .cb-launch-ico svg { width: 22px; height: 22px; }
-  .cb-launch-ico img { width: 42px; height: 42px; border-radius: 50%; display: block; }
+  .cb-launch-ico img { object-fit: cover; width: 42px; height: 42px; border-radius: 50%; display: block; }
   .cb-launch .i-close { display: none; }
   .cb-launch[aria-expanded='true'] .i-chat { display: none; }
   .cb-launch[aria-expanded='true'] .i-close { display: block; }
@@ -165,7 +172,7 @@ const data = { ...S, email: config.email, lang };
 
   .cb-head { display: flex; align-items: center; gap: 10px; padding: 14px 10px 14px 16px; background: var(--ink); color: var(--bg); }
   .cb-av { position: relative; width: 44px; height: 44px; flex: none; }
-  .cb-av img { width: 44px; height: 44px; border-radius: 50%; display: block; box-shadow: 0 0 0 2px rgb(255 255 255 / 0.18); }
+  .cb-av img { object-fit: cover; width: 44px; height: 44px; border-radius: 50%; display: block; box-shadow: 0 0 0 2px rgb(255 255 255 / 0.18); }
   .cb-av i { position: absolute; right: 0; bottom: 1px; width: 11px; height: 11px; border-radius: 50%; background: #22c55e; border: 2px solid var(--ink); }
   .cb-id { display: grid; line-height: 1.3; margin-right: auto; min-width: 0; }
   .cb-id b { font-weight: 500; }
@@ -210,6 +217,8 @@ const data = { ...S, email: config.email, lang };
   .cb-send:hover { transform: translateY(-1px); }
   .cb-send[disabled] { opacity: 0.5; cursor: progress; transform: none; }
   .cb-send svg { width: 20px; height: 20px; }
+  .cb-links { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .cb-handoff { padding: 3px 14px 6px; align-self: start; font-size: 0.83rem; }
   .cb-note { margin: 0; padding: 0 14px 12px; background: var(--surface); font-size: 0.74rem; color: var(--muted); }
   .cb-note a { color: inherit; }
 

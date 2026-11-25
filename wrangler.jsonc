@@ -37,8 +37,7 @@
     { "name": "BOOK_RL", "namespace_id": "1005", "simple": { "limit": 6, "period": 60 } }
   ],
 
-  // OPENAI_API_KEY é um segredo (npx wrangler secret put OPENAI_API_KEY). Nunca no código.
-  // CONTACT_TO e OPENAI_MODEL (opcionais) podem ser definidos no painel: Settings → Variables. Não são apagados nos deploys.
+  // Preserva variáveis e segredos já configurados.
   "keep_vars": true,
 
   "observability": { "enabled": true },

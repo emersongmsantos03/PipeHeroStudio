@@ -1,6 +1,7 @@
 ---
-import { LANGS, ROUTES, type Lang, type PageKey } from '../../i18n/routes';
-import Home from '../../views/Home.astro';
+import { ROUTES, type Lang, type PageKey } from '../../i18n/routes';
+import Home from '../../views/Detailing.astro';
+import Demo from '../../views/DetailingDemo.astro';
 import Sites from '../../views/Sites.astro';
 import Clinics from '../../views/Clinics.astro';
 import Crm from '../../views/Crm.astro';
@@ -11,7 +12,7 @@ import Legal from '../../views/Legal.astro';
 import NotFound from '../../views/NotFound.astro';
 
 export function getStaticPaths() {
-  return LANGS.flatMap((lang) =>
+  return (['en'] as const).flatMap((lang) =>
     (Object.keys(ROUTES) as PageKey[]).map((key) => ({
       params: { lang, slug: ROUTES[key][lang] || undefined },
       props: { lang, key },
@@ -21,7 +22,8 @@ export function getStaticPaths() {
 
 const { lang, key } = Astro.props as { lang: Lang; key: PageKey };
 ---
-{key === 'home' && <Home lang={lang} />}
+{key === 'home' && <Home />}
+{key === 'demo' && <Demo />}
 {key === 'sites' && <Sites lang={lang} />}
 {key === 'clinics' && <Clinics lang={lang} />}
 {key === 'crm' && <Crm lang={lang} />}

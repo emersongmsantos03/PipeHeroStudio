@@ -1,14 +1,11 @@
 import type { APIRoute } from 'astro';
-import { LANGS, type Lang } from '../../i18n/routes';
-import { t } from '../../i18n';
 import { ogPng } from '../../lib/og';
 
 export function getStaticPaths() {
-  return LANGS.map((lang) => ({ params: { lang } }));
+  return [{ params: { lang: 'en' } }];
 }
 
-export const GET: APIRoute = async ({ params }) => {
-  const lang = params.lang as Lang;
-  const png = await ogPng(t(lang).brandLine, 'PIPE HERO STUDIO  ·  01 SITE  ·  02 CHAT  ·  03 CRM  ·  04 IA');
+export const GET: APIRoute = async () => {
+  const png = await ogPng('Websites & AI for auto detailers.', 'PIPE HERO STUDIO');
   return new Response(png as BodyInit, { headers: { 'Content-Type': 'image/png' } });
 };

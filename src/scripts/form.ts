@@ -1,5 +1,7 @@
 /* Formulário: pré-preenchimento, validação e envio (webhook n8n ou /api/contact na Cloudflare). */
 
+import { campaignFromBrowser } from './campaign-browser';
+
 type Msgs = {
   required: string; email: string; phone: string; privacy: string; fix: string;
   sending: string; successTitle: string; successText: string; fail: string; localOnly: string;
@@ -28,6 +30,10 @@ function init(form: HTMLFormElement) {
     return;
   }
 
+  const service = form.elements.namedItem('servico') as HTMLSelectElement;
+  const interest = q.get('interesse') || q.get('servico');
+  if (interest && Array.from(service.options).some((option) => option.value === interest)) service.value = interest;
+
   // Pré-preenchimento vindo do hero: ?nome=…&tipo=…
   const nome = (q.get('nome') || '').slice(0, 80).trim();
   const tipo = q.get('tipo') || '';
@@ -35,8 +41,7 @@ function init(form: HTMLFormElement) {
   if (nome || tipoLabel) {
     if (nome) el('negocio').value = nome;
     if (tipoLabel) el('tipo').value = tipo;
-    const svc = el('servico') as unknown as HTMLSelectElement;
-    if (!svc.value || svc.value === 'unsure') svc.value = 'site';
+    if (service.value === 'unsure') service.value = 'site';
     const box = form.querySelector<HTMLElement>('[data-prefill]');
     if (box && nome) {
       box.textContent = fill(m.prefill, { name: nome, type: tipoLabel || '—' });
@@ -88,6 +93,9 @@ function init(form: HTMLFormElement) {
     }
     const data = new URLSearchParams();
     new FormData(form).forEach((v, k) => data.append(k, String(v).trim()));
+    if (form.dataset.endpoint === '/api/contact') {
+      for (const [key, value] of Object.entries(campaignFromBrowser())) data.set(key, value);
+    }
     const name = el('nome').value.trim().split(/\s+/)[0];
 
     const done = () => {

@@ -223,6 +223,7 @@ a.notice:hover { filter: brightness(.97); }
   .phead h1 { font-size: 19px; }
   .page { padding: 16px 16px 48px; }
   .lbl-md { display: none; }
+  .search-trigger { min-width: 0; }
   .search-trigger .kbd { display: none; }
 }
 @media (max-width: 640px) { .phead .actions .lbl { display: none; } .top .lbl { display: none; } }
@@ -851,3 +852,73 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 4px 0; width: 100
 .ag-chip input:focus-visible + span { box-shadow: var(--ring); }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 @media (max-width: 560px) { .ag-item { grid-template-columns: 54px minmax(0, 1fr); } .ag-act { grid-column: 1 / -1; justify-content: flex-start; } }
+
+/* ===================== Instagram ===================== */
+.ig-hero {
+  background: radial-gradient(ellipse at 100% 0%, #71345a, transparent 66%),
+    linear-gradient(112deg, #221a3c 8%, #332044 58%, #4b2543);
+  border: 1px solid #654862;
+  border-radius: 18px;
+  color: #fff8fc;
+  padding: clamp(18px, 3.2vw, 36px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 18px 24px;
+}
+.ig-identity, .ig-profile-line, .ig-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ig-identity { gap: 16px; min-width: 0; }
+.ig-avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  aspect-ratio: 1;
+  border-radius: 17px;
+  background: linear-gradient(145deg, #a43a7d, #a93d57 62%, #a55137);
+  border: 1px solid #ffffff38;
+}
+.ig-avatar svg { width: 30px; height: 30px; }
+.ig-profile-line h2 { font-size: clamp(20px, 3.2vw, 32px); letter-spacing: -.045em; font-weight: 600; overflow-wrap: anywhere; }
+.ig-identity p { margin: 5px 0 0; color: #ead4e7; font-size: 13px; }
+.ig-status { background: #ffffff16; padding: 4px 10px; border-radius: 999px; font-size: 12px; }
+.ig-status.is-live { color: #e4ffef; background: #205245; }
+.ig-profile-link { display: inline-flex; gap: 7px; align-items: center; text-decoration: none; font-weight: 500; padding: 8px 3px; }
+.ig-profile-link:hover { text-decoration: underline; }
+.ig-profile-link svg { width: 15px; height: 15px; }
+.ig-actions .ig-refresh { background: #fff3fa; color: #35223a; border-color: transparent; }
+.ig-actions .ig-refresh:hover { background: #fff; }
+.ig-notice { margin: 0; }
+.ig-section-head { display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; flex-wrap: wrap; margin-bottom: 12px; }
+.ig-section-head h2, .ig-referral h2 { font-size: 17px; letter-spacing: -.02em; }
+.ig-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.ig-metric { padding: 15px 16px; gap: 5px; }
+.ig-symbol {
+  display: grid; place-items: center; width: 36px; height: 36px; border-radius: 11px;
+  color: color-mix(in srgb, var(--ig-series, var(--info)) 68%, var(--ink));
+  background: color-mix(in srgb, var(--ig-series, var(--info)) 16%, var(--surface));
+}
+.ig-symbol svg { width: 18px; height: 18px; }
+.ig-metric .label { margin-top: 4px; }
+.ig-metric .value, .ig-referral > strong { font-size: clamp(29px, 3.6vw, 44px); line-height: 1.08; font-weight: 600; letter-spacing: -.05em; }
+.ig-metric .value { margin-top: 0; }
+.ig-tone-purple { --ig-series: #a16bea; }
+.ig-tone-pink { --ig-series: #dd598c; }
+.ig-tone-orange { --ig-series: #e47d43; }
+.ig-tone-blue { --ig-series: var(--s1); }
+.ig-lower { display: grid; gap: 16px; align-items: start; min-width: 0; }
+.ig-lower.has-chart { grid-template-columns: minmax(0, 1fr) minmax(225px, 285px); }
+.ig-trend, .ig-referral { border-radius: 15px; }
+.ig-trend [hidden] { display: none; }
+.ig-chart { margin-top: 18px; }
+.ig-referral { display: grid; gap: 10px; }
+.ig-referral p, .ig-empty { color: var(--muted); margin: 0; }
+.ig-referral .btn { justify-self: start; margin-top: 4px; }
+.ig-empty { padding-block: 18px; }
+.ig-traffic-link { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px 16px; }
+.ig-traffic-link h2 { font-size: 15px; }
+.ig-traffic-link p { margin: 3px 0 0; }
+@media (max-width: 1140px) { .ig-lower.has-chart { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 720px) { .ig-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ig-metric { padding: 12px; } }
+@media (max-width: 380px) { .ig-avatar { width: 44px; } .ig-avatar svg { width: 24px; height: 24px; } .ig-identity { gap: 10px; } }

@@ -1,30 +1,17 @@
 ---
 import Logo from './Logo.astro';
-import Flag from './Flag.astro';
 import { t } from '../i18n';
-import { LOCALE, href, type Lang, type PageKey } from '../i18n/routes';
+import { href, type Lang, type PageKey } from '../i18n/routes';
 
 interface Props { lang: Lang; page: PageKey }
 const { lang, page } = Astro.props;
 const d = t(lang);
-const nav: { key: PageKey; label: string; cta?: boolean }[] = [
-  { key: 'sites', label: d.ui.nav.sites },
-  { key: 'crm', label: d.ui.nav.crm },
-  { key: 'agents', label: d.ui.nav.agents },
-  { key: 'clinics', label: d.ui.nav.clinics },
-  { key: 'contact', label: d.ui.nav.contact },
-  { key: 'book', label: d.ui.nav.book, cta: true },
+const nav: { label: string; url: string; cta?: boolean }[] = [
+  { label: 'Live demo', url: '/en/demo/' },
+  { label: 'How it works', url: '/en/#how-it-works' },
+  { label: 'Pricing', url: '/en/#plans' },
+  { label: 'Book a call', url: '/en/book/', cta: true },
 ];
-const langPage: PageKey = page === 'notFound' ? 'home' : page;
-
-/** Bandeiras e regiões de cada idioma (texto sempre na própria língua). */
-const LANG_INFO: Record<Lang, { flags: ('us' | 'gb' | 'br' | 'pt' | 'es')[]; name: string; regions: string }> = {
-  en: { flags: ['us', 'gb'], name: 'English', regions: 'United States · United Kingdom' },
-  pt: { flags: ['br', 'pt'], name: 'Português', regions: 'Brasil · Portugal' },
-  es: { flags: ['es'], name: 'Español', regions: 'España' },
-};
-const ORDER: Lang[] = ['en', 'pt', 'es'];
-const cur = LANG_INFO[lang];
 ---
 <header class="site-header">
   <div class="wrap header-in">
@@ -36,32 +23,10 @@ const cur = LANG_INFO[lang];
     <nav class="nav-main" aria-label={d.ui.navLabel}>
       <ul>
         {nav.map((n) => (
-          <li><a href={href(lang, n.key)} class={n.cta ? 'nav-cta' : undefined} aria-current={page === n.key ? 'page' : undefined}>{n.label}</a></li>
+          <li><a href={n.url} data-campaign-link class={n.cta ? 'nav-cta' : undefined} aria-current={href(lang, page) === n.url ? 'page' : undefined}>{n.label}</a></li>
         ))}
       </ul>
     </nav>
-
-    <details class="hdr-pop langs" data-pop>
-      <summary>
-        <span class="flags">{cur.flags.map((f) => <Flag code={f} />)}</span>
-        <span class="lang-code">{lang.toUpperCase()}</span>
-        <span class="sr-only">— {d.ui.langLabel}: {cur.name}</span>
-        <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" /></svg>
-      </summary>
-      <nav class="pop-panel langs-panel" aria-label={d.ui.langLabel}>
-        <ul>
-          {ORDER.map((l) => (
-            <li>
-              <a href={href(l, langPage)} lang={LOCALE[l]} hreflang={LOCALE[l]} data-lang={l} aria-current={l === lang ? 'page' : undefined}>
-                <span class="flags">{LANG_INFO[l].flags.map((f) => <Flag code={f} />)}</span>
-                <span class="lang-txt"><b>{LANG_INFO[l].name}</b><small>{LANG_INFO[l].regions}</small></span>
-                {l === lang && <svg class="tick" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg>}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </nav>
-    </details>
 
     <details class="hdr-pop menu" data-pop>
       <summary><span class="burger" aria-hidden="true"><i></i><i></i></span>{d.ui.menu}</summary>
@@ -69,7 +34,7 @@ const cur = LANG_INFO[lang];
         <ul>
           {nav.map((n) => (
             <li>
-              <a href={href(lang, n.key)} aria-current={page === n.key ? 'page' : undefined}>
+              <a href={n.url} data-campaign-link aria-current={href(lang, page) === n.url ? 'page' : undefined}>
                 {n.label}
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13m-5-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
               </a>

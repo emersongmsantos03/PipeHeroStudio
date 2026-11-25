@@ -11,6 +11,8 @@ import * as reports from './views/reports.js';
 import * as templates from './views/templates.js';
 import * as activity from './views/activity.js';
 import * as traffic from './views/traffic.js';
+import * as instagram from './views/instagram.js';
+import * as detailing from './views/detailing.js';
 import * as agenda from './views/agenda.js';
 import { montarAva, abrirAva } from './ava.js';
 import * as prospects from './views/prospects.js';
@@ -26,6 +28,8 @@ const NAV = [
   { href: '#/agenda', key: 'agenda', label: 'Agenda', icon: 'calendar' },
   { href: '#/activity', key: 'activity', label: 'Atividade', icon: 'clock' },
   { href: '#/traffic', key: 'traffic', label: 'Tráfego do site', icon: 'globe' },
+  { href: '#/detailing', key: 'detailing', label: 'Estética automotiva', icon: 'target' },
+  { href: '#/instagram', key: 'instagram', label: 'Instagram', icon: 'instagram' },
   { group: 'Vendas' },
   { href: '#/crm', key: 'crm', label: 'Pipeline', icon: 'board' },
   { href: '#/leads', key: 'leads', label: 'Leads', icon: 'list' },
@@ -50,6 +54,8 @@ const ROUTES = [
   [/^\/finance$/, 'finance', (c) => finance.render(c)],
   [/^\/activity$/, 'activity', (c) => activity.render(c)],
   [/^\/traffic$/, 'traffic', (c) => traffic.render(c)],
+  [/^\/detailing$/, 'detailing', (c) => detailing.render(c)],
+  [/^\/instagram$/, 'instagram', (c) => instagram.render(c)],
   [/^\/agenda$/, 'agenda', (c) => agenda.render(c)],
   [/^\/prospects$/, 'prospects', (c) => prospects.render(c), false, 'list'],
   [/^\/assistant$/, 'dashboard', (c) => { abrirAva(); location.hash = '#/'; }],

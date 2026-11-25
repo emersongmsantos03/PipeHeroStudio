@@ -40,13 +40,7 @@ for (const f of files) {
     const hash = url.split('#')[1];
     if (hash && target.endsWith('.html') && !ids.get(target)?.has(hash)) { console.log(`✗ ${f}: ${url} (âncora em falta)`); errors++; }
   }
-  // seletor de idioma: 3 links, um por idioma, cada um para uma página existente
-  const langs = [...html.matchAll(/<a [^>]*data-lang="(pt|en|es)"[^>]*>/g)];
-  if (/\/(pt|en|es)\//.test(f) && !f.endsWith(`${DIST}/index.html`)) {
-    const got = new Set(langs.map((l) => l[1]));
-    if (got.size !== 3) { console.log(`✗ ${f}: seletor de idioma incompleto`); errors++; }
-    langLinks += langs.length;
-  }
+  if (!html.includes('<html lang="en"')) { console.log(`✗ ${f}: página fora do inglês`); errors++; }
 }
-console.log(`${files.length} páginas, ${checked} links internos, ${langLinks} links de idioma verificados. Erros: ${errors}`);
+console.log(`${files.length} páginas, ${checked} links internos verificados. Erros: ${errors}`);
 process.exit(errors ? 1 : 0);

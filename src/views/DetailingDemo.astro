@@ -1,0 +1,181 @@
+---
+import Base from '../layouts/Base.astro';
+import '../styles/northline-demo.css';
+---
+<Base lang="en" page="demo" title="Try the Auto Detailing Website & Ava | Pipe Hero Studio" description="Chat with Ava, book a detailing appointment or request a quote, and see how she keeps the shop’s CRM and calendar up to date.">
+  <div class="studio" data-detailing-demo>
+    <div class="demo-bar"><div class="wrap"><a href="/en/" data-campaign-link>← Pipe Hero Studio</a><span>Interactive demo · Fictional business</span><a href="#shop-view" data-shop-link>Shop CRM ↗</a></div></div>
+    <header class="north-header">
+      <nav class="wrap north-nav" aria-label="Northline Detailing">
+        <a class="north-brand" href="#northline"><span aria-hidden="true">N</span> Northline<strong>Detailing</strong></a>
+        <div class="north-links"><a href="#services">Services</a><a href="#our-work">Our work</a><a href="#faq">FAQ</a></div>
+        <a class="north-button" href="#ava" data-ava-open data-start-quote>Get a quote <span aria-hidden="true">↗</span></a>
+      </nav>
+    </header>
+    <section class="north-hero" id="northline">
+      <img src="/images/detailing-studio.webp" alt="Silver sports car under paint inspection lights" width="1200" height="800" fetchpriority="high" />
+      <div class="wrap hero-copy">
+        <p class="kicker">Auto detailing &amp; paint protection</p>
+        <h1>Bring back<br />the finish.</h1>
+        <p>From a deep interior clean to paint correction and ceramic protection, we’ll help you find the right service for your car.</p>
+        <div class="hero-actions">
+          <a class="north-button" href="#ava" data-ava-open>Chat with Ava <span aria-hidden="true">↗</span></a>
+          <a class="north-secondary" href="#services">Explore services <span aria-hidden="true">↓</span></a>
+        </div>
+        <p class="hero-hint">Ask a question, share a photo, get a quote or book a time.</p>
+      </div>
+    </section>
+    <section class="wrap north-section" id="services">
+      <div class="service-intro">
+        <div><p class="kicker">Services</p><h2>What does your car need?</h2></div>
+        <p>Start with the area you want to improve. Ava can help you compare the options before you ask for a quote.</p>
+      </div>
+      <div class="service-grid">
+        {[
+          ['Interior & exterior detailing', 'Clean and refresh the cabin, bodywork, wheels and glass.', 'What’s included in a full detail?'],
+          ['Paint correction', 'Polish dull paint and address light scratches and swirl marks after inspection.', 'Can paint correction help with swirl marks?'],
+          ['Ceramic coating', 'Make routine washing easier and help protect the finish.', 'How does ceramic coating protect my paint?'],
+          ['Paint protection film', 'Add a physical layer of protection to high-impact areas.', 'How much of the car should I cover with PPF?'],
+        ].map(([name, description, question]) => <article>
+          <h3>{name}</h3><p>{description}</p>
+          <a href="#ava" data-ava-open data-question={question}>Ask Ava about this <span aria-hidden="true">↗</span></a>
+        </article>)}
+      </div>
+    </section>
+    <section class="north-work" id="our-work">
+      <div class="wrap north-section work-grid">
+        <figure class="north-gallery">
+          <img class="north-gallery-main" src="/images/northline-finish.webp" alt="Rear of a polished silver coupe under rectangular studio lights" width="1000" height="667" loading="lazy" />
+          <img class="north-gallery-detail" src="/images/detailing-polish.webp" alt="Detailer using a polisher on blue paint under inspection lighting" width="900" height="600" loading="lazy" />
+          <figcaption>Example studio photography</figcaption>
+        </figure>
+        <div>
+          <p class="kicker">Our process</p>
+          <h2>A finish worth a closer look.</h2>
+          <ol>
+            <li><strong>Tell us what you drive.</strong> Share the make, model and what you want to improve.</li>
+            <li><strong>Show us the area.</strong> Add a photo to give us a better starting point.</li>
+            <li><strong>Get a quote from the team.</strong> We’ll confirm the scope after checking the vehicle.</li>
+          </ol>
+          <a class="north-button" href="#ava" data-ava-open>Show Ava my car <span aria-hidden="true">↗</span></a>
+        </div>
+      </div>
+    </section>
+    <section class="wrap north-section faq-grid" id="faq">
+      <div><p class="kicker">FAQ</p><h2>Before you book.</h2></div>
+      <div>
+        <details><summary>How do I get a quote?</summary><p>Ask Ava for a quote and tell her what you drive and what you’d like done. She’ll take your name and phone number and send the request to the team. You can add a photo at any point.</p></details>
+        <details><summary>Can I book online?</summary><p>Yes. Ava shows the open times and books interior and full details right in the chat. Paint correction, ceramic coating and PPF start with a quick inspection visit, which she can book too. You can also ask her to move or cancel your appointment.</p></details>
+        <details><summary>Can you tell whether a scratch will polish out from a picture?</summary><p>A photo helps point us toward the area. We check the paint in person before confirming what correction can achieve.</p></details>
+        <details><summary>Can I use the chat without a photo?</summary><p>Yes. Ask about services or describe the vehicle and the areas you want looked at. You can also try the sample photo.</p></details>
+      </div>
+    </section>
+    <section class="north-contact" id="ava">
+      <div class="wrap north-section">
+        <p class="kicker">Talk to Northline</p>
+        <h2>Let’s take a look at your car.</h2>
+        <p>Ask Ava for a quote or pick an open time. She’ll take your details and get you on the calendar or in front of the team.</p>
+        <a class="north-button" href="#ava" data-ava-open>Start a chat <span aria-hidden="true">↗</span></a>
+      </div>
+    </section>
+
+    <a class="ava-launch north-button" href="#ava" data-ava-open aria-haspopup="dialog" aria-controls="ava-chat">
+      <span class="ava-face"><img src="/images/ava-detailing-v2.webp" alt="" width="38" height="38" /><i class="ava-online" aria-hidden="true"></i></span><span>Chat with Ava<small>Quotes &amp; booking</small></span>
+    </a>
+    <dialog id="ava-chat" class="ava-dialog" aria-labelledby="ava-title" data-ava-dialog>
+      <header class="ava-head">
+        <span class="ava-face"><img src="/images/ava-detailing-v2.webp" alt="" width="44" height="44" /><i class="ava-online" aria-hidden="true"></i></span>
+        <div><h2 id="ava-title">Chat with Ava</h2><p>Northline Detailing · Online now</p></div>
+        <button type="button" data-ava-close aria-label="Close Ava chat">×</button>
+      </header>
+      <div class="ava-content">
+        <div class="dialogue" role="log" aria-label="Conversation with Ava" aria-live="polite" tabindex="0" data-dialogue>
+          <div class="ava-turn ava-turn-assistant">
+            <span class="ava-speaker">Ava</span>
+            <p class="ava-bubble">Hi! I’m Ava. 👋 Ask me about a service, share a photo, get a quote or book a time.</p>
+          </div>
+        </div>
+        <div class="ava-prompts" data-ava-prompts>
+          <button type="button" data-question="What’s the difference between paint correction and ceramic coating?">Compare services</button>
+          <button type="button" data-question="I’d like a quote for paint correction for my 2022 Honda Civic. There are light scratches on the hood.">Ask for a quote</button>
+          <button type="button" data-question="Can I book an interior detail this week?">Book a detail</button>
+        </div>
+        <form data-chat>
+          <div class="ava-attachment" data-attachment hidden>
+            <img data-thumbnail alt="Selected vehicle photo" width="48" height="48" hidden />
+            <p data-photo-status role="status" class="muted"></p>
+            <button class="upload" type="button" data-remove aria-label="Remove photo" hidden>×</button>
+          </div>
+          <label class="sr-only" for="demo-message">Your message</label>
+          <div class="ava-composer">
+            <label class="ava-attach-button">
+              <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="8.5" cy="9.5" r="1.2"/><path d="m4 16 4.3-4 3.2 3 3.3-3.3L20 17"/></svg>
+              <span>Photo</span>
+              <input type="file" aria-label="Attach a photo" accept="image/jpeg,image/png,image/webp" data-photo />
+            </label>
+            <input id="demo-message" type="text" maxlength="700" placeholder="Type a message…" />
+            <button class="ava-send" type="submit" aria-label="Send">
+              <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg>
+            </button>
+          </div>
+          <button class="ava-example" type="button" data-example>Use sample photo</button>
+        </form>
+        <div class="ava-request" data-request-result hidden>
+          <p data-request-status role="status"></p>
+          <div class="ava-request-actions">
+            <a href="#shop-view" data-shop-link>View shop CRM ↗</a>
+            <button type="button" data-new-request>Start another quote</button>
+          </div>
+        </div>
+        <p class="ava-disclosure">Demo · Use sample details and photos without people or plates. <a href="/en/privacy/">OpenAI &amp; privacy</a></p>
+      </div>
+    </dialog>
+    <section class="wrap north-section demo-owner" id="shop-view">
+      <details data-shop-inbox>
+        <summary>Owner view · Open the shop CRM &amp; calendar</summary>
+        <div class="inbox">
+          <p class="kicker">Owner view · Sample data</p>
+          <h2>Shop dashboard</h2>
+          <p>Ava keeps the CRM and calendar up to date as customers chat. Ask her about today’s agenda, follow-ups or how many jobs you’ve done, or tell her to move an appointment.</p>
+          <div class="north-owner-grid">
+            <section>
+              <h3>CRM · New requests</h3>
+              <ul data-inbox></ul>
+              <p data-empty>Ask Ava for a quote or book a time to see the lead here, with contact details.</p>
+            </section>
+            <section>
+              <h3>Calendar</h3>
+              <ul data-calendar></ul>
+            </section>
+          </div>
+          <form data-owner>
+            <label for="owner-message">Ask Ava about your shop</label>
+            <div class="owner-prompts">
+              <button class="upload" type="button" data-owner-question="What’s on today’s agenda?">Today’s agenda</button>
+              <button class="upload" type="button" data-owner-question="How many of each service did we do in the last 30 days?">Jobs in the last 30 days</button>
+              <button class="upload" type="button" data-owner-question="Which leads need a follow-up, and what should I say?">Follow-ups</button>
+              <button class="upload" type="button" data-owner-question="Move Priya’s ceramic coating to the next open morning.">Move an appointment</button>
+            </div>
+            <div class="tools">
+              <input id="owner-message" placeholder="Ask about the agenda, leads or jobs…" maxlength="700" required />
+              <button class="btn btn-hero" type="submit">Ask</button>
+            </div>
+            <p data-owner-answer role="status" class="muted"></p>
+          </form>
+        </div>
+      </details>
+    </section>
+    <footer class="north-footer">
+      <div class="wrap">
+        <a class="north-brand" href="#northline"><span aria-hidden="true">N</span> Northline<strong>Detailing</strong></a>
+        <p>Fictional studio website by Pipe Hero Studio.</p>
+        <a href="/en/contact/?servico=agents" data-campaign-link>Get a site and Ava for your shop ↗</a>
+      </div>
+    </footer>
+  </div>
+</Base>
+
+<script>
+  import '../scripts/detailing-demo';
+</script>
+

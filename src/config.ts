@@ -24,8 +24,7 @@ export const config = {
   formWebhook: '',
 
   /**
-   * Chat de IA no canto do ecrã (worker/chat.ts → /api/chat, modelo da OpenAI).
-   * A chave da OpenAI é um segredo na Cloudflare (OPENAI_API_KEY), nunca no código.
+   * Chat do site respondido pelo Qwen no PC, com formulário quando indisponível.
    */
   chatEnabled: true,
 

@@ -1,0 +1,95 @@
+---
+import Arrow from './Arrow.astro';
+import type { Lang } from '../i18n/routes';
+
+interface Props { lang: Lang; offer: 'website' | 'crm' }
+const { lang, offer } = Astro.props;
+const demo = {
+  en: {
+    try: 'Simulate a request', result: 'Example request completed.', label: 'Interactive example',
+    website: {
+      title: 'See how a visitor requests a quote', intro: 'Try the steps a customer would take on a phone.',
+      steps: [['Find the right service', 'See what the business offers.'], ['Request a quote', 'Send contact details and a short description.'], ['Get confirmation', 'See that the request reached the business.']],
+      cta: 'Request my website',
+    },
+    crm: {
+      title: 'See an inquiry turn into a follow-up', intro: 'Try a fictional inquiry from Morgan at Cedar Studio.',
+      steps: [['Request received', 'Morgan asks for a quote through the website.'], ['Contact added to the CRM', 'Cedar Studio appears in the New stage.'], ['Follow-up scheduled', 'A task reminds the team to reply tomorrow.']],
+      cta: 'Discuss my CRM',
+    },
+  },
+  pt: {
+    try: 'Simular um pedido', result: 'Pedido de exemplo concluído.', label: 'Exemplo interativo',
+    website: {
+      title: 'Veja como um cliente pede orçamento', intro: 'Experimente o caminho que um cliente faria pelo celular.',
+      steps: [['Encontra o serviço', 'Vê o que a empresa oferece.'], ['Pede um orçamento', 'Envia o contato e descreve o que precisa.'], ['Recebe a confirmação', 'Vê que o pedido chegou à empresa.']],
+      cta: 'Pedir meu site',
+    },
+    crm: {
+      title: 'Veja um pedido virar uma tarefa de retorno', intro: 'Simule um pedido de Morgan, da empresa fictícia Cedar Studio.',
+      steps: [['Pedido recebido', 'Morgan pede um orçamento pelo site.'], ['Contato registrado no CRM', 'Cedar Studio entra na etapa Novo.'], ['Retorno agendado', 'Uma tarefa lembra a equipe de responder amanhã.']],
+      cta: 'Conversar sobre meu CRM',
+    },
+  },
+  es: {
+    try: 'Simular una solicitud', result: 'Solicitud de ejemplo completada.', label: 'Ejemplo interactivo',
+    website: {
+      title: 'Descubre cómo un cliente pide presupuesto', intro: 'Prueba los pasos que seguiría un cliente desde su móvil.',
+      steps: [['Encuentra el servicio', 'Consulta lo que ofrece el negocio.'], ['Pide un presupuesto', 'Envía sus datos y describe qué necesita.'], ['Recibe la confirmación', 'Ve que su solicitud llegó al negocio.']],
+      cta: 'Solicitar mi sitio web',
+    },
+    crm: {
+      title: 'Descubre cómo se programa el seguimiento de una consulta', intro: 'Simula una consulta de Morgan, de la empresa ficticia Cedar Studio.',
+      steps: [['Solicitud recibida', 'Morgan pide un presupuesto desde la web.'], ['Contacto registrado en el CRM', 'Cedar Studio aparece en la etapa Nuevo.'], ['Seguimiento programado', 'Una tarea recuerda al equipo que responda mañana.']],
+      cta: 'Hablar sobre mi CRM',
+    },
+  },
+}[lang];
+const copy = demo[offer];
+const id = offer === 'website' ? 'demo-site' : 'demo-crm';
+---
+<section class="offer-demo wrap" id={id} data-offer-demo={offer} aria-labelledby={`${id}-title`}>
+  <div class="demo-panel panel">
+    <div>
+      <p class="tag">{demo.label}</p>
+      <h2 id={`${id}-title`}>{copy.title}</h2>
+      <p class="muted">{copy.intro}</p>
+    </div>
+    <ol class="demo-steps">
+      {copy.steps.map(([title, description]) => <li><strong>{title}</strong><span>{description}</span></li>)}
+    </ol>
+    <div class="demo-actions">
+      <button class="btn btn-hero" type="button" data-demo-start data-result={demo.result} hidden>{demo.try}</button>
+      <a class="link link-arrow" href="#pedido">{copy.cta}<Arrow /></a>
+    </div>
+    <p class="demo-status" role="status"></p>
+  </div>
+</section>
+<script>
+  for (const demo of document.querySelectorAll<HTMLElement>('[data-offer-demo]')) {
+    const button = demo.querySelector<HTMLButtonElement>('[data-demo-start]');
+    const status = demo.querySelector<HTMLElement>('[role="status"]');
+    if (!button || !status) continue;
+    button.hidden = false;
+    button.addEventListener('click', () => {
+      if (demo.classList.contains('is-complete')) return;
+      demo.classList.add('is-complete');
+      status.textContent = button.dataset.result || '';
+      button.setAttribute('aria-disabled', 'true');
+      demo.dispatchEvent(new CustomEvent('offer-demo-started', { bubbles: true, detail: demo.dataset.offerDemo }));
+    });
+  }
+</script>
+<style>
+  .offer-demo { margin-block: clamp(1rem, 4vw, 3rem) clamp(3rem, 7vw, 6rem); scroll-margin-top: 6rem; }
+  .demo-panel { display: grid; gap: 1.25rem; padding: clamp(1.25rem, 4vw, 2.5rem); }
+  h2 { margin-block: .45rem; }
+  .demo-steps { display: grid; gap: .75rem; list-style: none; padding: 0; margin: 0; }
+  .demo-steps li { display: grid; align-content: start; gap: .35rem; padding: .9rem; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; }
+  .demo-steps span { color: var(--muted); }
+  .is-complete li { border-color: var(--hero); }
+  .demo-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .9rem 1.25rem; }
+  [hidden], .demo-status:empty { display: none; }
+  .demo-status { font-weight: 600; margin: 0; }
+  @media (min-width: 720px) { .demo-steps { grid-template-columns: repeat(3, 1fr); } }
+</style>

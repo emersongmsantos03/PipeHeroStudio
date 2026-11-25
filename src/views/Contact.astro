@@ -5,25 +5,22 @@ import ContactForm from '../components/ContactForm.astro';
 import CopyEmail from '../components/CopyEmail.astro';
 import { t } from '../i18n';
 import { href, type Lang } from '../i18n/routes';
-import { config } from '../config';
 
 interface Props { lang: Lang }
 const { lang } = Astro.props;
 const d = t(lang);
 const c = d.contact;
-const wa = config.whatsapp.replace(/\D/g, '');
 ---
 <Base lang={lang} page="contact" title={c.title} description={c.description}>
   <div class="line wrap">
     <Station side="left" name={d.ui.nav.contact} labelledby="ct-title" start end>
       <div class="form-split">
         <div class="st-text">
-          <h1 id="ct-title">{c.title1}</h1>
-          <p class="lead">{c.lead}</p>
+          <h1 id="ct-title">Tell us about your detailing shop.</h1>
+          <p class="lead">Share what you need and we’ll follow up by email. You can also book a free 15-minute call.</p>
           <CopyEmail lang={lang} label={d.form.email} />
           <dl class="ct-list">
             <div><dt class="tag">{d.book.nav}</dt><dd><a class="link" href={href(lang, 'book')}>{d.hero.book}</a></dd></div>
-            {wa && <div><dt class="tag">WhatsApp</dt><dd><a class="link" href={`https://wa.me/${wa}`} rel="noopener">{d.ui.whatsapp}</a></dd></div>}
             <div><dt class="tag">{c.callTitle}</dt><dd class="muted">{c.callText}</dd></div>
           </dl>
         </div>

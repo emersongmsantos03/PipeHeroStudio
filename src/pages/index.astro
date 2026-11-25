@@ -1,45 +1,13 @@
 ---
-/* Raiz: abre em inglês (ou na língua que o visitante escolheu antes). Sem JavaScript, os links ficam visíveis. */
-import '../styles/global.css';
-import Logo from '../components/Logo.astro';
-import { LANGS, LOCALE, absolute, href } from '../i18n/routes';
-import { t } from '../i18n';
+const destination = '/en/';
 ---
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Pipe Hero Studio</title>
-    <meta name="description" content="Pipe Hero Studio: websites, chat, CRM and AI agents for small businesses. Português · English · Español." />
-    <meta name="robots" content="noindex, follow" />
-    {LANGS.map((l) => <link rel="alternate" hreflang={LOCALE[l]} href={absolute(href(l, 'home'))} />)}
-    <link rel="alternate" hreflang="x-default" href={absolute(href('en', 'home'))} />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <meta name="theme-color" content="#eef1f4" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0b1120" media="(prefers-color-scheme: dark)" />
-    <script is:inline>
-      (function () {
-        var pick = 'en';
-        try { var s = localStorage.getItem('phs-lang'); if (s === 'pt' || s === 'es' || s === 'en') pick = s; } catch (e) {}
-        location.replace('/' + pick + '/');
-      })();
-    </script>
-  </head>
-  <body>
-    <main class="root wrap">
-      <span class="root-logo"><Logo /></span>
-      <h1 class="h2">Pipe Hero Studio</h1>
-      <ul>
-        {LANGS.map((l) => (
-          <li><a class="btn btn-ghost" href={href(l, 'home')} lang={LOCALE[l]} hreflang={LOCALE[l]} data-lang={l}>{t(l).langName}</a></li>
-        ))}
-      </ul>
-    </main>
-    <style>
-      .root { min-height: 100vh; display: grid; place-content: center; justify-items: center; gap: 24px; text-align: center; }
-      .root-logo svg { width: 56px; height: 56px; }
-      .root ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
-    </style>
-  </body>
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="refresh" content="0;url=/en/" />
+<link rel="canonical" href="https://pipeherostudio.digital/en/" />
+<title>Pipe Hero Studio</title>
+</head>
+<body><a href={destination}>Visit Pipe Hero Studio</a></body>
 </html>

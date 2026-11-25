@@ -5,6 +5,7 @@ import Elbow from '../components/Elbow.astro';
 import ContactForm from '../components/ContactForm.astro';
 import CopyEmail from '../components/CopyEmail.astro';
 import Arrow from '../components/Arrow.astro';
+import OfferDemo from '../components/OfferDemo.astro';
 import { t } from '../i18n';
 import { priceFrom, type Lang } from '../i18n/routes';
 import { config } from '../config';
@@ -25,10 +26,14 @@ const schema = [{ '@type': 'Service', name: c.price.label, description: c.descri
       <p class="tag"><b>03</b><span aria-hidden="true">/</span>CRM</p>
       <h1 id="crm-title">{c.hero.title}</h1>
       <p class="lead">{c.hero.lead}</p>
-      <div class="lhero-cta"><a class="btn btn-hero" href="#pedido">{c.hero.cta}<Arrow /></a></div>
+      <div class="lhero-cta"><a class="btn btn-hero" href="#pedido">{c.hero.cta}<Arrow /></a>
+        <a class="link link-arrow" href="#demo-crm">{({ en: 'Try the demo', pt: 'Testar demonstração', es: 'Probar la demostración' })[lang]}<Arrow /></a>
+      </div>
     </div>
 
   </section>
+
+  <OfferDemo lang={lang} offer="crm" />
 
   <div class="line wrap">
     <Station side="left" code="03.1" name={c.does.name} labelledby="crm-does" start>

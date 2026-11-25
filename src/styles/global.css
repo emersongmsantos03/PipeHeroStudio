@@ -446,6 +446,36 @@ a { color: inherit; }
 .note-dot::before { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--hero); box-shadow: 0 0 0 4px color-mix(in srgb, var(--hero) 30%, transparent); flex: none; }
 @media (max-width: 899px) { .lhero { grid-template-columns: minmax(0, 1fr); } }
 
+/* Oferta e exemplos de sites */
+.site-hero-strong {
+  font-family: var(--f-display); font-weight: 600;
+  font-size: clamp(1.3rem, 1rem + 1.4vw, 2rem); letter-spacing: -0.02em; line-height: 1.2;
+}
+.site-hero-price {
+  display: inline-flex; align-items: baseline; gap: 8px;
+  font-family: var(--f-mono); font-size: 0.9rem; color: var(--muted);
+}
+.site-hero-price b {
+  font-family: var(--f-display); font-weight: 800;
+  font-size: 1.5rem; color: var(--ink); letter-spacing: -0.03em;
+}
+.website-example-tabs {
+  margin: 0; padding: 4px; display: flex; flex-wrap: wrap; justify-content: center; gap: 4px;
+  max-width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+}
+.website-example-tabs label, .website-example-tabs button {
+  cursor: pointer; padding: 8px clamp(8px, 2vw, 14px); min-height: 40px;
+  display: inline-flex; align-items: center; border: 0; border-radius: 8px;
+  background: transparent; font: inherit; font-size: 0.92rem; font-weight: 500; color: var(--muted);
+}
+.website-example-tabs :is(label, button):hover { color: var(--ink); }
+.website-example-tabs input:checked + label, .website-example-tabs button[aria-pressed='true'] {
+  background: var(--hero); color: var(--on-hero);
+}
+.website-example-tabs input:focus-visible + label, .website-example-tabs button:focus-visible {
+  outline: 3px solid var(--ink); outline-offset: 2px;
+}
+
 /* Lista técnica numerada */
 .items { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--line); }
 .items li { display: grid; grid-template-columns: 44px 1fr; gap: 4px 12px; padding: 22px 20px 22px 0; border-bottom: 1px solid var(--line); align-content: start; }
