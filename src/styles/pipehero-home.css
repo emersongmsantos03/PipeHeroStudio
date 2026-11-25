@@ -81,3 +81,13 @@ body.site-home {
 .phs-home .phs-plan-list li::before { content: ''; position: absolute; left: 0; top: .62em; width: 8px; height: 8px; border-radius: 50%; background: var(--phs-gold); }
 .phs-home .phs-plan-list strong { color: #f3ede2; }
 .phs-home .phs-plan-grid article > p.phs-plan-note { margin: 0 0 18px; font-size: .88rem; color: #9d9586; }
+/* Hero: website first, Ava as add-on */
+.phs-home .phs-intro { color: #ece4d6; }
+.phs-home .phs-proof { display: flex; flex-wrap: wrap; gap: 8px; margin: 22px 0 0; padding: 0; list-style: none; }
+.phs-home .phs-proof li { padding: 7px 12px; border: 1px solid #5a4a33; border-radius: 999px; background: #1b1812; color: #e6dccb; font-size: .9rem; }
+.phs-home .phs-proof strong { color: var(--phs-gold); font-weight: 750; margin-right: 3px; }
+.phs-home .phs-addon { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 24px 0 0; padding-top: 18px; border-top: 1px solid #312b23; color: #c9c0b1; font-size: .93rem; }
+.phs-home .phs-addon span { padding: 2px 8px; border-radius: 5px; background: #2a2318; color: var(--phs-gold); font: 600 .7rem var(--f-mono); text-transform: uppercase; letter-spacing: .08em; }
+.phs-home .phs-addon a { color: #f9ebd1; font-weight: 600; text-underline-offset: 4px; }
+.phs-home .phs-lead { max-width: 46ch; margin: 14px 0 0; color: #d6cdbe; }
+.phs-home .phs-steps p, .phs-home .phs-plan-grid article > p:not(.phs-price), .phs-home .phs-region { color: #d3cabb; }

@@ -7,22 +7,28 @@ const steps = [
   ['Report on your shop, on demand', 'Ask Ava what’s on today’s schedule, which new requests came in or how many jobs of each service you did on a given day or between two dates. She pulls it from your systems and flags what needs your attention.'],
 ];
 ---
-<Base lang="en" page="home" title="Websites & AI for Auto Detailing Shops | Pipe Hero Studio" description="A website for your detailing shop, plus Ava: an AI that supervises your CRM and booking calendar, qualifies leads and handles the busywork.">
+<Base lang="en" page="home" title="Websites for Auto Detailing Shops | Pipe Hero Studio" description="A fast, mobile-first website that shows off your detailing work and turns visitors into quote requests. Preview in 48 business hours, US$100 one-time, pay only if you love it.">
   <div class="phs-home">
     <section class="wrap phs-hero">
       <div class="phs-hero-copy">
-        <p class="phs-eyebrow">Websites &amp; AI for auto detailers</p>
-        <h1>Turn more visits into <em>detailing jobs.</em></h1>
-        <p class="phs-intro">Start with a website that shows off your work. Add Ava, the AI that supervises your CRM and booking calendar, qualifies every lead and does the busywork, so you spend your time on cars.</p>
+        <p class="phs-eyebrow">Websites for auto detailing shops</p>
+        <h1>A website that turns your work into <em>booked jobs.</em></h1>
+        <p class="phs-intro">Your finish speaks for itself. We build a fast, mobile-first site that shows it off and turns visitors into quote requests, so new customers find you and reach out.</p>
+        <ul class="phs-proof">
+          <li><strong>48h</strong> to see your preview</li>
+          <li><strong>US$100</strong> one-time · €100 in Ireland</li>
+          <li><strong>$0</strong> unless you love it</li>
+        </ul>
         <div class="phs-actions">
-          <a class="phs-button" href="/en/demo/" data-campaign-link>Explore the detailing demo <span aria-hidden="true">↗</span></a>
-          <a class="phs-text-link" href="#plans">See pricing <span aria-hidden="true">↓</span></a>
+          <a class="phs-button" href="/en/contact/?servico=site" data-campaign-link>Get my website preview <span aria-hidden="true">↗</span></a>
+          <a class="phs-text-link" href="/en/demo/" data-campaign-link>See a live example <span aria-hidden="true">↗</span></a>
         </div>
+        <p class="phs-addon"><span>Add-on</span> Want help with messages and bookings? <a href="#how-it-works">Meet Ava, your AI front desk ↓</a></p>
       </div>
       <a class="phs-demo-image" href="/en/demo/" aria-label="Open the Northline Detailing demo website" data-campaign-link>
         <img src="/images/pipehero-detailing.webp" alt="Graphite sports coupe reflecting warm inspection lights in a detailing garage" width="1200" height="800" fetchpriority="high" />
         <span class="phs-demo-caption">
-          <span><small>Live demo website</small><strong>Northline Detailing</strong></span>
+          <span><small>Example site we built</small><strong>Northline Detailing</strong></span>
           <span class="phs-arrow" aria-hidden="true">↗</span>
         </span>
       </a>
@@ -31,8 +37,9 @@ const steps = [
     <section class="phs-how" id="how-it-works">
       <div class="wrap phs-how-grid">
         <div>
-          <p class="phs-eyebrow">From first hello to booked job</p>
-          <h2>Meet Ava, the AI that runs your front desk.</h2>
+          <p class="phs-eyebrow">Optional add-on · Ava</p>
+          <h2>Then let Ava handle the front desk.</h2>
+          <p class="phs-lead">Once your site is live, Ava answers customers, books jobs and keeps your CRM and calendar in order, so you stay on the cars.</p>
           <ol class="phs-steps">
             {steps.map(([title, description], index) => <li>
               <span aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
