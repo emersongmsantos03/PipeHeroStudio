@@ -18,8 +18,14 @@ let _dn = null;
 function pais(c) {
   if (!c || c === '?' || c.length !== 2) return 'Desconhecido';
   try { _dn ||= new Intl.DisplayNames(['pt-BR'], { type: 'region' }); } catch { /* sem suporte */ }
+  const cc = c.toUpperCase();
+  // Códigos especiais da Cloudflare (T1 = rede Tor, XX = desconhecido) não são países: Intl.DisplayNames daria erro.
+  if (cc === 'T1') return 'Rede Tor';
+  if (!/^[A-Z]{2}$/.test(cc) || cc === 'XX') return 'Desconhecido';
+  let nome = cc;
+  try { nome = (_dn && _dn.of(cc)) || cc; } catch { /* código não reconhecido */ }
   const flag = String.fromCodePoint(...[...c.toUpperCase()].map((x) => 0x1f1a5 + x.charCodeAt(0)));
-  return `${flag} ${(_dn && _dn.of(c.toUpperCase())) || c}`;
+  return `${flag} ${nome}`;
 }
 const ORIGENS = [[/^prospector$/, 'Prospector'], [/google\./, 'Google'], [/bing\./, 'Bing'], [/duckduckgo/, 'DuckDuckGo'], [/instagram/, 'Instagram'], [/facebook|fb\./, 'Facebook'],
   [/linkedin|lnkd\.in/, 'LinkedIn'], [/(^|\.)t\.co$|twitter|x\.com$/, 'X / Twitter'], [/whatsapp|wa\.me/, 'WhatsApp'], [/reddit/, 'Reddit'], [/pinterest/, 'Pinterest'],
