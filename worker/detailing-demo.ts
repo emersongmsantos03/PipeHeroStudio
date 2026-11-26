@@ -19,7 +19,9 @@ type OpenAIOutput = {
 
 const DAILY_LIMIT = 100;
 const MAX_BYTES = 650_000;
-const MODEL = 'gpt-4.1-mini';
+const MODEL = 'gpt-6-luna';
+// Chat ao vivo: sem raciocínio estendido, para responder rápido e não gastar o limite de saída em tokens de raciocínio.
+const REASONING = { effort: 'none' } as const;
 const INTENTS = ['none', 'quote', 'book', 'reschedule', 'cancel_booking', 'cancel_quote'] as const;
 type Intent = typeof INTENTS[number];
 
@@ -235,7 +237,7 @@ export async function handleDetailingDemo(request: Request, env: DemoEnv, ctx: E
       redirect: 'manual',
       headers: { Authorization: 'Bearer ' + env.OPENAI_API_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: MODEL, store: false, max_output_tokens: mode === 'customer' ? 450 : 320,
+        model: MODEL, store: false, reasoning: REASONING, max_output_tokens: mode === 'customer' ? 600 : 450,
         instructions, input, text: format,
       }),
       signal: AbortSignal.timeout(18_000),
