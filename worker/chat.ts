@@ -8,15 +8,43 @@ export interface ChatEnv extends NotifyEnv {
   EMAIL: SendEmail;
   CHAT_RL: RateLimit;
   CONTACT_TO?: string;
+  OPENAI_API_KEY?: string;
 }
 
 type Msg = { role: 'user' | 'assistant'; content: string };
-const JOB_TTL = 24_000;
 const readText = (body: string) => new Response(body, {
   headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },
 });
 const error = (status: number) => new Response(null, { status });
 const MAX_BODY_BYTES = 55_000;
+const OPENAI_MODEL = 'gpt-6-luna';
+const OPENAI_DAILY_LIMIT = 300;
+
+// Resposta principal do chat público: OpenAI (gpt-6-luna, sem raciocínio estendido, para ser rápido).
+async function answerWithOpenAI(env: ChatEnv, instructions: string, history: Msg[]): Promise<string> {
+  if (!env.OPENAI_API_KEY) return '';
+  const day = new Date().toISOString().slice(0, 10);
+  const budget = await env.DB.prepare(
+    "INSERT INTO settings(key,value) VALUES(?, '1') ON CONFLICT(key) DO UPDATE SET value = CAST(CAST(settings.value AS INTEGER) + 1 AS TEXT) "
+    + 'WHERE CAST(settings.value AS INTEGER) < ? RETURNING value',
+  ).bind('public_chat_openai:' + day, OPENAI_DAILY_LIMIT).first();
+  if (!budget) return '';
+  const response = await fetch('https://api.openai.com/v1/responses', {
+    method: 'POST',
+    redirect: 'manual',
+    headers: { Authorization: 'Bearer ' + env.OPENAI_API_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: OPENAI_MODEL, store: false, reasoning: { effort: 'none' }, max_output_tokens: 400, instructions, input: history }),
+    signal: AbortSignal.timeout(15_000),
+  });
+  const data = await response.json() as { output?: { type: string; content?: { type: string; text?: string }[] }[] };
+  if (!response.ok) {
+    console.error('public chat openai', { status: response.status, request: response.headers.get('x-request-id') });
+    return '';
+  }
+  return (data.output || []).flatMap((item) => item.type === 'message'
+    ? (item.content || []).filter((part) => part.type === 'output_text').map((part) => part.text || '') : [])
+    .join('\n').replace(/\*\*?/g, '').trim().slice(0, 1800);
+}
 
 async function readJson(request: Request) {
   const reader = request.body?.getReader();
@@ -66,35 +94,15 @@ export async function handleChat(request: Request, env: ChatEnv, ctx: ExecutionC
   const record = (mode: string) => ctx.waitUntil(logEvent(env.DB, 'chat_message', 'ava', {
     ref: sessionId || crypto.randomUUID(), meta: { ...meta, mode },
   }));
+  const instructions = SYSTEM + '\nPage language: ' + lang + '. Contact path: ' + href(lang, 'contact');
   try {
-    const online = await env.DB.prepare("SELECT value FROM settings WHERE key='public_chat_seen'").first<{ value: string }>();
-    if (online && Date.now() - Date.parse(online.value) < 30_000) {
-      const id = crypto.randomUUID();
-      const expires = Date.now() + JOB_TTL;
-      const payload = JSON.stringify([{ role: 'system', content: SYSTEM + '\nPage language: ' + lang
-        + '. Contact path: ' + href(lang, 'contact') }, ...history]);
-      const row = await env.DB.prepare(
-        "INSERT INTO public_chat_jobs(id,expires,payload) SELECT ?,?,? WHERE "
-        + "(SELECT COUNT(*) FROM public_chat_jobs WHERE expires>? AND state IN ('queued','running'))<4 RETURNING id",
-      ).bind(id, expires, payload, Date.now()).first();
-      if (row) {
-        while (Date.now() < expires && !request.signal.aborted) {
-          await new Promise((resolve) => setTimeout(resolve, 1500));
-          const result = await env.DB.prepare(
-            'SELECT state,answer FROM public_chat_jobs WHERE id=?',
-          ).bind(id).first<{ state: string; answer: string | null }>();
-          if (!result || result.state === 'failed') break;
-          if (result.state === 'done' && result.answer) {
-            ctx.waitUntil(env.DB.prepare('DELETE FROM public_chat_jobs WHERE id=?').bind(id).run());
-            record('ollama');
-            return readText(result.answer);
-          }
-        }
-        ctx.waitUntil(env.DB.prepare('DELETE FROM public_chat_jobs WHERE id=?').bind(id).run());
-      }
+    const answer = await answerWithOpenAI(env, instructions, history);
+    if (answer) {
+      record('openai');
+      return readText(answer);
     }
-  } catch {
-    console.error('public chat relay unavailable');
+  } catch (e) {
+    console.error('public chat openai unavailable', (e as Error).name);
   }
   record('fallback');
   return readText(FALLBACK[lang]);
