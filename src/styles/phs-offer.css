@@ -95,3 +95,13 @@
   .phs-home .phs-actions .phs-button-lg { width: 100%; }
   .phs-home .phs-final .phs-actions { width: 100%; }
 }
+
+/* Hero: keep the main CTA above the fold on laptops */
+@media (min-width: 761px) {
+  .phs-home .phs-hero { grid-template-columns: minmax(0,1.12fr) minmax(0,.88fr); padding-block: clamp(28px,4.5vw,64px) clamp(36px,5vw,80px); }
+  .phs-home .phs-hero h1 { font-size: clamp(2.6rem,4.3vw,4.2rem); }
+  .phs-home .phs-hero-copy .phs-eyebrow { max-width: 52ch; margin-bottom: 14px; }
+  .phs-home .phs-hero .phs-intro { margin-top: 16px; }
+  .phs-home .phs-hero .phs-proof { margin-top: 18px; }
+  .phs-home .phs-hero .phs-actions { margin-top: 22px; }
+}
